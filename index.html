@@ -1502,8 +1502,16 @@
 
         // Seed Database Function (Firebase)
         async function seedDatabase() {
-            alert("Starting Seed Process..."); // Immediate feedback
-            if (!confirm('This will attempt to seed the Firebase database with current categories and products. Make sure you have updated the firebaseConfig in the code. Continue?')) return;
+            if (!currentUser) {
+                alert("You must be logged in as an admin to seed the database.");
+                return;
+            }
+            // Optional: Check if email matches admin list locally before trying (though Rules are source of truth)
+            if (!adminEmails.includes(currentUser.email)) {
+                alert(`You are logged in as ${currentUser.email}, but this account is not in the admin list. Writes may fail.`);
+            }
+
+            if (!confirm(`Logged in as ${currentUser.email}. This will attempt to seed the Firebase database. Continue?`)) return;
 
             if (!window.db) {
                 alert('Firebase not initialized. Check console.');
@@ -1511,6 +1519,9 @@
             }
 
             console.log('Starting seed process...');
+            let successCount = 0;
+            let failureCount = 0;
+
             try {
                 for (const cat of categories) {
                     console.log(`Creating category: ${cat.name}`);
@@ -1522,50 +1533,56 @@
                             color: cat.color,
                             iconName: cat.iconName
                         });
+                        successCount++;
                     } catch (e) {
                         console.error(`Error creating category ${cat.name}:`, e);
-                        continue;
+                        failureCount++;
+                        continue; // Cannot add subcategories if category fails
                     }
 
                     for (const sub of cat.subcategories) {
-                        console.log(`  Creating subcategory: ${sub.name}`);
-                        let subRef;
                         try {
-                            subRef = await window.addDoc(window.collection(window.db, 'subcategories'), {
+                            const subRef = await window.addDoc(window.collection(window.db, 'subcategories'), {
                                 name: sub.name,
                                 image: sub.image,
                                 categoryId: catRef.id
                             });
+                            successCount++;
+
+                            for (const prod of sub.products) {
+                                try {
+                                    await window.addDoc(window.collection(window.db, 'products'), {
+                                        name: prod.name,
+                                        company: prod.company,
+                                        price: prod.price,
+                                        originalPrice: prod.originalPrice,
+                                        unit: prod.unit,
+                                        rating: prod.rating,
+                                        reviews: prod.reviews,
+                                        image: prod.image,
+                                        subcategoryId: subRef.id,
+                                        categoryId: catRef.id
+                                    });
+                                    successCount++;
+                                } catch (e) {
+                                    console.error(`    Error creating product ${prod.name}:`, e);
+                                    failureCount++;
+                                }
+                            }
                         } catch (e) {
                             console.error(`  Error creating subcategory ${sub.name}:`, e);
-                            continue;
-                        }
-
-                        for (const prod of sub.products) {
-                            try {
-                                await window.addDoc(window.collection(window.db, 'products'), {
-                                    name: prod.name,
-                                    company: prod.company,
-                                    price: prod.price,
-                                    originalPrice: prod.originalPrice,
-                                    unit: prod.unit,
-                                    rating: prod.rating,
-                                    reviews: prod.reviews,
-                                    image: prod.image,
-                                    subcategoryId: subRef.id,
-                                    categoryId: catRef.id
-                                });
-                                console.log(`    Created product: ${prod.name}`);
-                            } catch (e) {
-                                console.error(`    Error creating product ${prod.name}:`, e);
-                            }
+                            failureCount++;
                         }
                     }
                 }
-                alert('Seeding completed! Check Firebase Console.');
+
+                let msg = `Seeding process finished.\nSuccesses: ${successCount}\nFailures: ${failureCount}`;
+                if (failureCount > 0) msg += "\n\nCheck the browser console (F12) for specific error messages (likely Permission Denied).";
+                alert(msg);
+
             } catch (err) {
-                console.error('Seed Error:', err);
-                alert('An error occurred during seeding. See console.');
+                console.error('Seed Critical Error:', err);
+                alert('A critical error occurred. See console.');
             }
         }
     </script>
