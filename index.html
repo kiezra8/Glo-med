@@ -1,0 +1,1548 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Glo-Med Search</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Supabase SDK -->
+    <script type="module">
+        import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+        // Initialize Supabase
+        const supabaseUrl = 'https://nmavrucyndvpypwddsxe.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tYXZydWN5bmR2cHlwd2Rkc3hlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc4MDk1MTEsImV4cCI6MjA4MzM4NTUxMX0.5F8cleqV4oWDt0GOQA-FWTBxlEVF06cTmhc4rvap82c';
+        const supabase = createClient(supabaseUrl, supabaseKey);
+
+        // Expose to window
+        window.supabase = supabase;
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #F7F8FA;
+            min-height: 100vh;
+        }
+
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* PharmEasy Clean Card Style */
+        .pharmeasy-card {
+            background: #FFFFFF;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            transition: all 0.2s ease;
+        }
+
+        .pharmeasy-card:hover {
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+            transform: translateY(-2px);
+        }
+
+        /* PharmEasy Primary Colors */
+        .bg-pharmeasy-teal {
+            background: #10847E;
+        }
+
+        .text-pharmeasy-teal {
+            color: #10847E;
+        }
+
+        .bg-pharmeasy-orange {
+            background: #FF6F61;
+        }
+
+        .text-pharmeasy-orange {
+            color: #FF6F61;
+        }
+
+        /* Clean Header Style */
+        .pharmeasy-header {
+            background: #FFFFFF;
+            border-bottom: 1px solid #E8E8E8;
+        }
+
+        /* Search Bar */
+        .pharmeasy-search {
+            background: #F7F8FA;
+            border: 1px solid #E8E8E8;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .pharmeasy-search:focus {
+            outline: none;
+            border-color: #10847E;
+            background: #FFFFFF;
+        }
+
+        /* Category Cards */
+        .category-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .category-card:hover .category-image {
+            transform: scale(1.05);
+        }
+
+        /* Product Cards */
+        .product-card {
+            background: #FFFFFF;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            transition: all 0.2s ease;
+        }
+
+        .product-card:hover {
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+        }
+
+        /* Discount Badge */
+        .discount-badge {
+            background: #FF6F61;
+            color: #FFFFFF;
+            font-size: 10px;
+            font-weight: 600;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        /* Add to Cart Button */
+        .pharmeasy-btn {
+            background: #10847E;
+            color: #FFFFFF;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 16px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .pharmeasy-btn:hover {
+            background: #0D6B66;
+            transform: translateY(-1px);
+        }
+
+        .pharmeasy-btn:active {
+            transform: translateY(0);
+        }
+
+        /* Offer Cards */
+        .offer-card {
+            background: linear-gradient(135deg, #FF6F61 0%, #FF9068 100%);
+            border-radius: 12px;
+            color: #FFFFFF;
+            padding: 16px;
+            box-shadow: 0 4px 12px rgba(255, 111, 97, 0.3);
+        }
+
+        /* Bottom Navigation */
+        .bottom-nav {
+            background: #FFFFFF;
+            border-top: 1px solid #E8E8E8;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Cart Badge */
+        .cart-badge {
+            background: #10847E;
+            color: #FFFFFF;
+            font-size: 10px;
+            font-weight: 700;
+            min-width: 18px;
+            height: 18px;
+            border-radius: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Rating Stars */
+        .rating-star {
+            color: #FFA500;
+        }
+
+        /* Price Styling */
+        .price-current {
+            color: #1A1A1A;
+            font-weight: 700;
+            font-size: 16px;
+        }
+
+        .price-original {
+            color: #999999;
+            font-size: 13px;
+            text-decoration: line-through;
+        }
+
+        /* Clean Typography */
+        .section-title {
+            color: #1A1A1A;
+            font-weight: 700;
+            font-size: 18px;
+        }
+
+        .category-title {
+            color: #1A1A1A;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .product-name {
+            color: #333333;
+            font-weight: 500;
+            font-size: 13px;
+            line-height: 1.3;
+        }
+
+        .company-name {
+            color: #666666;
+            font-size: 11px;
+        }
+
+        /* Hero Carousel Styles */
+        .hero-carousel {
+            position: relative;
+            height: 180px;
+            overflow: hidden;
+            border-radius: 16px;
+        }
+
+        .hero-slide {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            transform: translateY(100%);
+            transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .hero-slide.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .hero-slide.exit {
+            opacity: 0;
+            transform: translateY(-100%);
+        }
+
+        /* Carousel Indicators */
+        .carousel-indicators {
+            position: absolute;
+            bottom: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 6px;
+            z-index: 10;
+        }
+
+        .indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.4);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .indicator.active {
+            width: 24px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.9);
+        }
+
+        /* Gradient Overlays for Slides */
+        .gradient-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.1));
+        }
+    </style>
+</head>
+
+<body class="flex justify-center min-h-screen" style="background: #F7F8FA;">
+    <div id="app" class="w-full max-w-md min-h-screen relative flex flex-col" style="background: #F7F8FA;">
+        <header id="header" class="pharmeasy-header sticky top-0 z-50"></header>
+        <main id="main-content" class="flex-1 overflow-y-auto pb-20 hide-scrollbar" style="background: #F7F8FA;"></main>
+        <nav id="bottom-nav" class="fixed bottom-0 w-full max-w-md bottom-nav flex justify-around py-3 z-50 px-2">
+        </nav>
+    </div>
+    <script>
+        window.onerror = function (msg, url, line) {
+            alert("Global Error: " + msg + "\nLine: " + line);
+        };
+        // Use the db initialized in the module above
+        // If strict module isolation is an issue, we can move the main logic into type="module" or use the window globals set above.
+        // For simplicity in this single-file setup, we rely on the window globals or standard script execution order.
+
+        const drugClasses = [
+            "Analgesics", "Antipyretics", "Antibiotics", "Antivirals", "Antifungals",
+            "Antimalarials", "Anthelmintics", "Antihistamines", "Antacids", "Anti-ulcer drugs",
+            "Antihypertensives", "Antidiabetic drugs", "Anticonvulsants", "Antidepressants",
+            "Antianxiety drugs", "Antipsychotics", "Bronchodilators", "Steroids (corticosteroids)",
+            "Diuretics", "Local anesthetics", "General anesthetics", "Chemotherapy drugs",
+            "Immunosuppressants", "Vaccines", "Hormonal drugs", "Anticoagulants",
+            "Antiplatelets", "Lipid-lowering drugs", "Muscle relaxants", "Antiemetics",
+            "Expectorants", "Cough suppressants"
+        ];
+
+        const drugSubcategories = drugClasses.map((d, i) => ({
+            name: d,
+            image: [
+                'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400&h=400&fit=crop',
+                'https://images.unsplash.com/photo-1471864190281-a93a3070b6de?w=400&h=400&fit=crop',
+                'https://images.unsplash.com/photo-1587854692152-cbe660dbde88?w=400&h=400&fit=crop',
+                'https://images.unsplash.com/photo-1585435557343-3b092031a831?w=400&h=400&fit=crop'
+            ][i % 4],
+            products: [{
+                name: `${d} Product`,
+                company: 'Glo-Med',
+                price: 'UGX 25,000',
+                originalPrice: 'UGX 30,000',
+                unit: 'Pack',
+                discount: '10% OFF',
+                rating: 4.5,
+                reviews: 100 + i * 5,
+                image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400&h=400&fit=crop'
+            }]
+        }));
+
+        const consumableList = [
+            { name: "Syringes", image: "https://images.unsplash.com/photo-1579154204845-72d0e10a4c0f?w=400&h=400&fit=crop" },
+            { name: "Needles", image: "https://images.unsplash.com/photo-1579154204845-72d0e10a4c0f?w=400&h=400&fit=crop" },
+            { name: "IV cannulas", image: "https://images.unsplash.com/photo-1603398938378-e54eab446dde?w=400&h=400&fit=crop" },
+            { name: "IV giving sets", image: "https://images.unsplash.com/photo-1603398938378-e54eab446dde?w=400&h=400&fit=crop" },
+            { name: "Gloves (sterile and non-sterile)", image: "https://images.unsplash.com/photo-1584473457409-ae5c91d7a8cc?w=400&h=400&fit=crop" },
+            { name: "Face masks", image: "https://images.unsplash.com/photo-1585435557343-3b092031a831?w=400&h=400&fit=crop" },
+            { name: "Surgical masks", image: "https://images.unsplash.com/photo-1585435557343-3b092031a831?w=400&h=400&fit=crop" },
+            { name: "N95 masks", image: "https://images.unsplash.com/photo-1585435557343-3b092031a831?w=400&h=400&fit=crop" },
+            { name: "Bandages", image: "https://images.unsplash.com/photo-1603398938378-e54eab446dde?w=400&h=400&fit=crop" },
+            { name: "Gauze swabs", image: "https://images.unsplash.com/photo-1603398938378-e54eab446dde?w=400&h=400&fit=crop" },
+            { name: "Cotton wool", image: "https://images.unsplash.com/photo-1603398938378-e54eab446dde?w=400&h=400&fit=crop" },
+            { name: "Plasters", image: "https://images.unsplash.com/photo-1603398938378-e54eab446dde?w=400&h=400&fit=crop" },
+            { name: "Surgical blades", image: "https://images.unsplash.com/photo-1530026405186-ed1f139313f8?w=400&h=400&fit=crop" },
+            { name: "Suture materials", image: "https://images.unsplash.com/photo-1579154204845-72d0e10a4c0f?w=400&h=400&fit=crop" },
+            { name: "Urine bags", image: "https://images.unsplash.com/photo-1584305556252-d3e43d6d7429?w=400&h=400&fit=crop" },
+            { name: "Specimen bottles", image: "https://images.unsplash.com/photo-1583911860205-72f8ac8ddcbe?w=400&h=400&fit=crop" },
+            { name: "Alcohol swabs", image: "https://images.unsplash.com/photo-1584305556252-d3e43d6d7429?w=400&h=400&fit=crop" },
+            { name: "Disinfectant wipes", image: "https://images.unsplash.com/photo-1584305556252-d3e43d6d7429?w=400&h=400&fit=crop" },
+            { name: "Test strips (glucose, urine)", image: "https://images.unsplash.com/photo-1583911860205-72f8ac8ddcbe?w=400&h=400&fit=crop" },
+            { name: "Catheters (foley, feeding)", image: "https://images.unsplash.com/photo-1579154204845-72d0e10a4c0f?w=400&h=400&fit=crop" },
+            { name: "Suction catheters", image: "https://images.unsplash.com/photo-1579154204845-72d0e10a4c0f?w=400&h=400&fit=crop" },
+            { name: "Syringe filters", image: "https://images.unsplash.com/photo-1579154204845-72d0e10a4c0f?w=400&h=400&fit=crop" },
+            { name: "Blood collection tubes", image: "https://images.unsplash.com/photo-1583911860205-72f8ac8ddcbe?w=400&h=400&fit=crop" },
+            { name: "Lancets", image: "https://images.unsplash.com/photo-1581594693702-fbdc51b2763b?w=400&h=400&fit=crop" },
+            { name: "Disposable gowns", image: "https://images.unsplash.com/photo-1631815588090-d4bfec5b1ccb?w=400&h=400&fit=crop" },
+            { name: "Caps and shoe covers", image: "https://images.unsplash.com/photo-1584473457409-ae5c91d7a8cc?w=400&h=400&fit=crop" },
+            { name: "Thermal paper (ultrasound/ECG)", image: "https://images.unsplash.com/photo-1603398938378-e54eab446dde?w=400&h=400&fit=crop" },
+            { name: "Disposable drapes", image: "https://images.unsplash.com/photo-1584473457409-ae5c91d7a8cc?w=400&h=400&fit=crop" },
+            { name: "Oxygen nasal cannulas", image: "https://images.unsplash.com/photo-1603398938378-e54eab446dde?w=400&h=400&fit=crop" },
+            { name: "Nebulizer masks", image: "https://images.unsplash.com/photo-1581594549595-35f6edc7b762?w=400&h=400&fit=crop" },
+            { name: "Hand sanitizers", image: "https://images.unsplash.com/photo-1584305556252-d3e43d6d7429?w=400&h=400&fit=crop" },
+            { name: "Wound dressings", image: "https://images.unsplash.com/photo-1603398938378-e54eab446dde?w=400&h=400&fit=crop" },
+            { name: "Cannula fixators", image: "https://images.unsplash.com/photo-1603398938378-e54eab446dde?w=400&h=400&fit=crop" },
+            { name: "Tape (micropore, surgical)", image: "https://images.unsplash.com/photo-1603398938378-e54eab446dde?w=400&h=400&fit=crop" },
+            { name: "Airway adjuncts (OPA, NPA)", image: "https://images.unsplash.com/photo-1581594549595-35f6edc7b762?w=400&h=400&fit=crop" }
+        ];
+
+        const equipmentList = [
+            { name: "Blood pressure machine (manual and digital)", image: "https://images.unsplash.com/photo-1623869151528-9104c2780838?w=400&h=400&fit=crop" },
+            { name: "Stethoscope", image: "https://images.unsplash.com/photo-1628595351029-c2bf17511435?w=400&h=400&fit=crop" },
+            { name: "Thermometer (digital, infrared)", image: "https://images.unsplash.com/photo-1584515933487-779824d29309?w=400&h=400&fit=crop" },
+            { name: "Oxygen concentrator", image: "https://images.unsplash.com/photo-1581594549595-35f6edc7b762?w=400&h=400&fit=crop" },
+            { name: "Pulse oximeter", image: "https://images.unsplash.com/photo-1603721203474-c0b0e4329cf0?w=400&h=400&fit=crop" },
+            { name: "Glucometer", image: "https://images.unsplash.com/photo-1603721203474-c0b0e4329cf0?w=400&h=400&fit=crop" },
+            { name: "Nebulizer", image: "https://images.unsplash.com/photo-1581594549595-35f6edc7b762?w=400&h=400&fit=crop" },
+            { name: "Suction machine", image: "https://images.unsplash.com/photo-1581594693702-fbdc51b2763b?w=400&h=400&fit=crop" },
+            { name: "ECG machine", image: "https://images.unsplash.com/photo-1581594693702-fbdc51b2763b?w=400&h=400&fit=crop" },
+            { name: "Ultrasound machine", image: "https://images.unsplash.com/photo-1530026405186-ed1f139313f8?w=400&h=400&fit=crop" },
+            { name: "Defibrillator", image: "https://images.unsplash.com/photo-1530026405186-ed1f139313f8?w=400&h=400&fit=crop" },
+            { name: "Autoclave", image: "https://images.unsplash.com/photo-1581594693702-fbdc51b2763b?w=400&h=400&fit=crop" },
+            { name: "Weighing scale (adult, infant)", image: "https://images.unsplash.com/photo-1581594549595-35f6edc7b762?w=400&h=400&fit=crop" },
+            { name: "Examination light", image: "https://images.unsplash.com/photo-1581594693702-fbdc51b2763b?w=400&h=400&fit=crop" },
+            { name: "Oxygen cylinder", image: "https://images.unsplash.com/photo-1581594549595-35f6edc7b762?w=400&h=400&fit=crop" },
+            { name: "Spirometer", image: "https://images.unsplash.com/photo-1615486511484-92e172cc4fe0?w=400&h=400&fit=crop" },
+            { name: "Fetal doppler", image: "https://images.unsplash.com/photo-1603721203474-c0b0e4329cf0?w=400&h=400&fit=crop" },
+            { name: "Laboratory centrifuge", image: "https://images.unsplash.com/photo-1530026405186-ed1f139313f8?w=400&h=400&fit=crop" },
+            { name: "Microscope", image: "https://images.unsplash.com/photo-1581093450021-4a7360e9a6b5?w=400&h=400&fit=crop" },
+            { name: "Infusion pump", image: "https://images.unsplash.com/photo-1581594693702-fbdc51b2763b?w=400&h=400&fit=crop" },
+            { name: "Syringe pump", image: "https://images.unsplash.com/photo-1579154204845-72d0e10a4c0f?w=400&h=400&fit=crop" },
+            { name: "Patient monitor", image: "https://images.unsplash.com/photo-1615486511484-92e172cc4fe0?w=400&h=400&fit=crop" },
+            { name: "CPAP/BiPAP machine", image: "https://images.unsplash.com/photo-1581594549595-35f6edc7b762?w=400&h=400&fit=crop" },
+            { name: "Sterilizer", image: "https://images.unsplash.com/photo-1581594693702-fbdc51b2763b?w=400&h=400&fit=crop" },
+            { name: "ENT diagnostic set", image: "https://images.unsplash.com/photo-1628595351029-c2bf17511435?w=400&h=400&fit=crop" },
+            { name: "Ophthalmoscope", image: "https://images.unsplash.com/photo-1628595351029-c2bf17511435?w=400&h=400&fit=crop" },
+            { name: "Otoscope", image: "https://images.unsplash.com/photo-1628595351029-c2bf17511435?w=400&h=400&fit=crop" },
+            { name: "Laryngoscope", image: "https://images.unsplash.com/photo-1530026405186-ed1f139313f8?w=400&h=400&fit=crop" },
+            { name: "Ambu bag (BVM)", image: "https://images.unsplash.com/photo-1581594549595-35f6edc7b762?w=400&h=400&fit=crop" },
+            { name: "Wheelchair", image: "https://images.unsplash.com/photo-1576765607924-3f7b8410a787?w=400&h=400&fit=crop" },
+            { name: "Hospital stretcher", image: "https://images.unsplash.com/photo-1631815588090-d4bfec5b1ccb?w=400&h=400&fit=crop" }
+        ];
+
+        const furnitureList = [
+            { name: "Hospital beds", image: "https://images.unsplash.com/photo-1631815588090-d4bfec5b1ccb?w=400&h=400&fit=crop" },
+            { name: "Examination couch", image: "https://images.unsplash.com/photo-1631815588090-d4bfec5b1ccb?w=400&h=400&fit=crop" },
+            { name: "Bedside lockers", image: "https://images.unsplash.com/photo-1516574187841-693083f6991f?w=400&h=400&fit=crop" },
+            { name: "Overbed tables", image: "https://images.unsplash.com/photo-1516574187841-693083f6991f?w=400&h=400&fit=crop" },
+            { name: "Medical trolleys", image: "https://images.unsplash.com/photo-1516574187841-693083f6991f?w=400&h=400&fit=crop" },
+            { name: "Drug trolleys", image: "https://images.unsplash.com/photo-1516574187841-693083f6991f?w=400&h=400&fit=crop" },
+            { name: "Instrument trolleys", image: "https://images.unsplash.com/photo-1516574187841-693083f6991f?w=400&h=400&fit=crop" },
+            { name: "Dressing trolleys", image: "https://images.unsplash.com/photo-1516574187841-693083f6991f?w=400&h=400&fit=crop" },
+            { name: "Doctor’s stool", image: "https://images.unsplash.com/photo-1606811971618-4486d14f3f72?w=400&h=400&fit=crop" },
+            { name: "Patient chairs", image: "https://images.unsplash.com/photo-1606811971618-4486d14f3f72?w=400&h=400&fit=crop" },
+            { name: "Waiting room chairs", image: "https://images.unsplash.com/photo-1576765607924-3f7b8410a787?w=400&h=400&fit=crop" },
+            { name: "IV poles", image: "https://images.unsplash.com/photo-1603398938378-e54eab446dde?w=400&h=400&fit=crop" },
+            { name: "Cupboards (medicine cabinets)", image: "https://images.unsplash.com/photo-1631815588090-d4bfec5b1ccb?w=400&h=400&fit=crop" },
+            { name: "Shelves for storage", image: "https://images.unsplash.com/photo-1631815588090-d4bfec5b1ccb?w=400&h=400&fit=crop" },
+            { name: "Delivery bed", image: "https://images.unsplash.com/photo-1631815588090-d4bfec5b1ccb?w=400&h=400&fit=crop" },
+            { name: "Baby cot/incubator stand", image: "https://images.unsplash.com/photo-1555529733-0e670560f7e1?w=400&h=400&fit=crop" },
+            { name: "Partition screens", image: "https://images.unsplash.com/photo-1516574187841-693083f6991f?w=400&h=400&fit=crop" },
+            { name: "Crash cart", image: "https://images.unsplash.com/photo-1516574187841-693083f6991f?w=400&h=400&fit=crop" },
+            { name: "Reception desk", image: "https://images.unsplash.com/photo-1594824476967-48c8b964273f?w=400&h=400&fit=crop" },
+            { name: "Dental chair", image: "https://images.unsplash.com/photo-1606811971618-4486d14f3f72?w=400&h=400&fit=crop" },
+            { name: "Waste bins (color coded)", image: "https://images.unsplash.com/photo-1603398938378-e54eab446dde?w=400&h=400&fit=crop" }
+        ];
+
+        const createSubcategories = (list, baseImage) => list.map((item, i) => {
+            const name = typeof item === 'string' ? item : item.name;
+            const image = typeof item === 'string' ? (baseImage || 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400&h=400&fit=crop') : item.image;
+
+            return {
+                name: name,
+                image: image,
+                products: [{
+                    name: `${name} Standard`,
+                    company: 'Glo-Med',
+                    price: 'UGX 50,000',
+                    originalPrice: 'UGX 60,000',
+                    unit: 'Unit',
+                    discount: '15% OFF',
+                    rating: 4.5,
+                    reviews: 120,
+                    image: image
+                }]
+            };
+        });
+
+        const categories = [
+            {
+                iconName: 'pill', name: 'Drugs', color: 'bg-blue-500',
+                image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400&h=400&fit=crop',
+                subcategories: drugSubcategories
+            },
+            {
+                iconName: 'package', name: 'Consumables', color: 'bg-orange-500',
+                image: 'https://iororwxhmiiqlq5p.leadongcdn.com/cloud/pnBplKplRllSqirjnqlrj/weixintupian_20250526144752.png',
+                subcategories: createSubcategories(consumableList, 'https://images.unsplash.com/photo-1584473457409-ae5c91d7a8cc?w=400&h=400&fit=crop')
+            },
+            {
+                iconName: 'stethoscope', name: 'Medical Equipment', color: 'bg-green-500',
+                image: 'https://images.unsplash.com/photo-1615486511484-92e172cc4fe0?w=400&h=400&fit=crop',
+                subcategories: createSubcategories(equipmentList, 'https://images.unsplash.com/photo-1615486511484-92e172cc4fe0?w=400&h=400&fit=crop')
+            },
+            {
+                iconName: 'armchair', name: 'Medical Furniture', color: 'bg-purple-500',
+                image: 'https://images.unsplash.com/photo-1631815588090-d4bfec5b1ccb?w=400&h=400&fit=crop',
+                subcategories: createSubcategories(furnitureList, 'https://images.unsplash.com/photo-1631815588090-d4bfec5b1ccb?w=400&h=400&fit=crop')
+            }
+        ];
+
+        const heroSlides = [
+            {
+                title: 'Fast Delivery',
+                subtitle: 'Get your medical supplies delivered',
+                description: 'Within 2-4 hours',
+                image: 'https://images.unsplash.com/photo-1587293852726-70cdb56c2866?w=800&fit=crop', // Delivery drone/bike
+                gradient: 'linear-gradient(135deg, #10847E 0%, #0D6B66 100%)'
+            },
+            {
+                title: 'New Arrivals',
+                subtitle: 'Latest drugs on the market',
+                description: 'FDA approved medications',
+                image: 'https://images.unsplash.com/photo-1631549916768-4119b2e5f926?w=800&fit=crop', // Pharma shelf
+                gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+            },
+            {
+                title: 'Special Deals',
+                subtitle: 'Up to 25% OFF on bulk orders',
+                description: 'Limited time offers',
+                image: 'https://images.unsplash.com/photo-1607619056574-7b8d3ee536b2?w=800&fit=crop', // Discounts
+                gradient: 'linear-gradient(135deg, #FF6F61 0%, #FF9068 100%)'
+            },
+            {
+                title: 'Quality Assured',
+                subtitle: 'Certified medical equipment',
+                description: '100% authentic products',
+                image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=800&fit=crop', // Quality seal/lab
+                gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
+            },
+            {
+                title: '24/7 Support',
+                subtitle: 'Expert medical consultation',
+                description: 'Always here to help',
+                image: 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=800&fit=crop', // Support/Doctor
+                gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'
+            }
+        ];
+
+        let currentUser = null;
+
+        let state = {
+            page: 'home',
+            selectedCategory: null,
+            selectedSubcategory: null,
+            cart: [], // items: { product, quantity }
+            currentSlide: 0,
+            activeChat: null,
+            searchQuery: ''
+        };
+
+        // Chat Data Mock
+        // Create a reactive chats array
+        let chats = [];
+        let messagesUnsubscribe = null;
+        let chatsUnsubscribe = null;
+
+        // Admin List (Simple hardcoded for now)
+        const adminEmails = ['israelezrakisakye@gmail.com', 'admin2@example.com'];
+
+        function subscribeToChats() {
+            if (chatsUnsubscribe) {
+                chatsUnsubscribe.unsubscribe();
+                chatsUnsubscribe = null;
+            }
+
+            if (!currentUser) {
+                chats = [];
+                updateUI();
+                return;
+            }
+
+            fetchChats();
+
+            const isUserAdmin = currentUser.role === 'admin';
+            const channel = window.supabase.channel('public:chats');
+
+            // Listen for changes
+            channel.on('postgres_changes', { event: '*', schema: 'public', table: 'chats' }, (payload) => {
+                // If specific user, filter locally or rely on payload
+                if (!isUserAdmin && payload.new && payload.new.user_id !== currentUser.uid) return;
+                fetchChats();
+            }).subscribe();
+
+            chatsUnsubscribe = channel;
+        }
+
+        async function fetchChats() {
+            const isUserAdmin = currentUser.role === 'admin';
+            let query = window.supabase.from('chats').select('*').order('last_message_time', { ascending: false });
+
+            if (!isUserAdmin) {
+                query = query.eq('user_id', currentUser.uid);
+            }
+
+            const { data, error } = await query;
+            if (error || !data) {
+                console.error("Error fetching chats:", error);
+                return;
+            }
+
+            chats = data.map(c => ({
+                id: c.id,
+                userId: c.user_id,
+                userName: c.user_name,
+                lastMessage: c.last_message,
+                lastMessageTime: c.last_message_time ? new Date(c.last_message_time) : null,
+                unreadAdmin: c.unread_admin,
+                unreadClient: c.unread_client,
+                avatar: c.avatar,
+                unread: isUserAdmin ? (c.unread_admin || 0) : (c.unread_client || 0),
+                time: c.last_message_time ? new Date(c.last_message_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''
+            }));
+
+            if (state.page === 'chat') updateUI();
+        }
+
+
+        let carouselInterval;
+
+        // Populate Products to ~50 per subcategory
+        function populateProducts() {
+            categories.forEach(cat => {
+                cat.subcategories.forEach(sub => {
+                    // Ensure existing have IDs
+                    sub.products.forEach(p => { if (!p.id) p.id = Math.random().toString(36).substr(2, 9); });
+
+                    const originals = [...sub.products];
+                    while (sub.products.length < 50) {
+                        const template = originals[Math.floor(Math.random() * originals.length)];
+                        sub.products.push({
+                            ...template,
+                            id: Math.random().toString(36).substr(2, 9),
+                            name: `${template.name} (Batch ${Math.floor(Math.random() * 100)})`,
+                            reviews: Math.floor(Math.random() * 500),
+                            rating: (4 + Math.random()).toFixed(1)
+                        });
+                    }
+                });
+            });
+        }
+        populateProducts();
+
+        function getProductById(id) {
+            for (let c of categories) {
+                for (let s of c.subcategories) {
+                    const p = s.products.find(p => p.id === id);
+                    if (p) return p;
+                }
+            }
+            return null;
+        }
+
+        function addToCart(productId) {
+            const product = getProductById(productId);
+            if (!product) return;
+
+            const existing = state.cart.find(i => i.product.id === productId);
+            if (existing) {
+                existing.quantity++;
+            } else {
+                state.cart.push({ product, quantity: 1 });
+            }
+            // Show toast or feedback
+            const btn = document.activeElement;
+            if (btn && btn.tagName === 'BUTTON') {
+                const originalText = btn.innerText;
+                btn.innerText = 'Added!';
+                btn.classList.add('bg-green-600');
+                setTimeout(() => {
+                    btn.innerText = originalText;
+                    btn.classList.remove('bg-green-600');
+                }, 1000);
+            }
+            updateUI();
+        }
+
+        function removeFromCart(productId) {
+            state.cart = state.cart.filter(i => i.product.id !== productId);
+            updateUI();
+        }
+
+        function updateQuantity(productId, change) {
+            const item = state.cart.find(i => i.product.id === productId);
+            if (item) {
+                item.quantity += change;
+                if (item.quantity <= 0) removeFromCart(productId);
+                else updateUI();
+            }
+        }
+
+        function openCategory(i) { state.selectedCategory = categories[i]; state.page = 'subcategories'; state.selectedSubcategory = null; updateUI(); }
+        function openSubcategory(i) { state.selectedSubcategory = state.selectedCategory.subcategories[i]; state.page = 'products'; updateUI(); }
+        function goBack() {
+            if (state.page === 'products') { state.page = 'subcategories'; state.selectedSubcategory = null; }
+            else if (state.page === 'subcategories') { state.page = 'home'; state.selectedCategory = null; }
+            updateUI();
+        }
+
+        function nextSlide() {
+            const slides = document.querySelectorAll('.hero-slide');
+            if (slides.length === 0) return;
+
+            slides[state.currentSlide].classList.remove('active');
+            slides[state.currentSlide].classList.add('exit');
+
+            state.currentSlide = (state.currentSlide + 1) % heroSlides.length;
+
+            setTimeout(() => {
+                slides.forEach(s => s.classList.remove('exit'));
+                slides[state.currentSlide].classList.add('active');
+                updateCarouselIndicators();
+            }, 100);
+        }
+
+        function goToSlide(index) {
+            const slides = document.querySelectorAll('.hero-slide');
+            if (slides.length === 0) return;
+
+            slides[state.currentSlide].classList.remove('active');
+            slides[state.currentSlide].classList.add('exit');
+
+            state.currentSlide = index;
+
+            setTimeout(() => {
+                slides.forEach(s => s.classList.remove('exit'));
+                slides[state.currentSlide].classList.add('active');
+                updateCarouselIndicators();
+            }, 100);
+        }
+
+        function updateCarouselIndicators() {
+            const indicators = document.querySelectorAll('.indicator');
+            indicators.forEach((ind, i) => {
+                if (i === state.currentSlide) {
+                    ind.classList.add('active');
+                } else {
+                    ind.classList.remove('active');
+                }
+            });
+        }
+
+        function startCarousel() {
+            stopCarousel();
+            carouselInterval = setInterval(nextSlide, 4000);
+        }
+
+        function stopCarousel() {
+            if (carouselInterval) {
+                clearInterval(carouselInterval);
+            }
+        }
+
+        function navigateTo(page, params = {}) {
+            // Reset states
+            if (page === 'home' || page === 'categories' || page === 'cart' || page === 'chat' || page === 'new-products') {
+                state.selectedCategory = null;
+                state.selectedSubcategory = null;
+                state.activeChat = null;
+            }
+
+            state.page = page;
+
+            if (page === 'chat-thread') {
+                state.activeChat = params.chatId;
+            }
+
+            updateUI();
+        }
+
+        function handleSearch(e) {
+            state.searchQuery = e.target.value.toLowerCase();
+            if (state.searchQuery.length > 0) {
+                navigateTo('search-results');
+            } else if (state.page === 'search-results') {
+                navigateTo('home');
+            }
+        }
+
+        async function createOrder() {
+            if (state.cart.length === 0) return;
+            if (!currentUser) {
+                alert("Please login to place an order");
+                navigateTo('profile');
+                return;
+            }
+
+            const orderText = `New Order Request:\n\n${state.cart.map(i => `- ${i.product.name} (x${i.quantity}) @ ${i.product.price}`).join('\n')}\n\nTotal Items: ${state.cart.reduce((a, b) => a + b.quantity, 0)}`;
+
+            try {
+                // 1. Create Order
+                const { error: orderError } = await window.supabase.from('orders').insert({
+                    items: state.cart, // Ensure 'items' column is JSONB
+                    user_email: currentUser.email,
+                    created_at: new Date().toISOString()
+                });
+                if (orderError) console.error("Order save error:", orderError); // Non-blocking
+
+                // 2. Start Chat or Get Existing
+                let chatId;
+                const { data: existingChats } = await window.supabase.from('chats')
+                    .select('id')
+                    .eq('user_id', currentUser.uid)
+                    .limit(1);
+
+                if (existingChats && existingChats.length > 0) {
+                    chatId = existingChats[0].id;
+                } else {
+                    const { data: newChat, error } = await window.supabase.from('chats').insert({
+                        user_id: currentUser.uid,
+                        user_name: currentUser.name,
+                        admin_ids: adminEmails,
+                        last_message: 'Order Request placed',
+                        last_message_time: new Date().toISOString(),
+                        unread_admin: 1,
+                        unread_client: 0,
+                        avatar: currentUser.photoURL || null
+                    }).select().single();
+
+                    if (error) throw error;
+                    chatId = newChat.id;
+                }
+
+                // 3. Send Order Message
+                const { error: msgError } = await window.supabase.from('messages').insert({
+                    chat_id: chatId,
+                    text: orderText,
+                    sender_id: currentUser.uid,
+                    sender_name: currentUser.name,
+                    timestamp: new Date().toISOString()
+                });
+                if (msgError) throw msgError;
+
+                // Update chat metadata
+                await window.supabase.from('chats').update({
+                    last_message: 'New Order Request',
+                    last_message_time: new Date().toISOString(),
+                    unread_admin: 1
+                }).eq('id', chatId);
+
+                // 4. Clear Cart
+                state.cart = [];
+
+                // 5. Navigate
+                navigateTo('chat-thread', { chatId: chatId });
+                console.log('Order created and chat started');
+
+            } catch (err) {
+                console.error('Order Error', err);
+                alert('Failed to place order: ' + err.message);
+            }
+        }
+
+        function renderHeader() {
+            const h = document.getElementById('header');
+            const cartCount = state.cart.reduce((a, b) => a + b.quantity, 0);
+
+            if (state.page === 'home' || state.page === 'search-results') {
+                h.innerHTML = `<div class="px-4 py-3"><div class="flex items-center justify-between mb-3"><div class="flex items-center gap-2"><div class="bg-pharmeasy-teal p-2 rounded-lg"><i data-lucide="stethoscope" class="w-5 h-5 text-white"></i></div><div><h1 class="font-bold text-gray-900 leading-tight text-lg">Glo-Med</h1><div class="flex items-center gap-1 text-xs text-gray-500"><i data-lucide="map-pin" class="w-3 h-3"></i><span>Kampala, UG</span></div></div></div><div class="flex items-center gap-4"><div class="relative" onclick="navigateTo('profile')"><i data-lucide="user" class="w-6 h-6 text-gray-700"></i></div><div class="relative" onclick="navigateTo('cart')"><i data-lucide="shopping-cart" class="w-6 h-6 text-gray-700"></i>${cartCount > 0 ? `<div class="absolute -top-1 -right-1 cart-badge">${cartCount}</div>` : ''}</div></div></div><div class="relative"><i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"></i><input type="text" oninput="handleSearch(event)" value="${state.searchQuery}" placeholder="Search medicines, equipment..." class="w-full pharmeasy-search pl-10 pr-4 py-3 text-sm text-gray-700"></div></div>`;
+            } else if (state.page === 'new-products') {
+                h.innerHTML = `<div class="px-4 py-3 bg-white border-b border-gray-100"><h2 class="text-xl font-bold text-gray-900">New On Market</h2><p class="text-xs text-gray-500">Latest updates, drugs & equipment</p></div>`;
+            } else if (state.page === 'categories') {
+                h.innerHTML = `<div class="px-4 py-3 bg-white border-b border-gray-100"><h2 class="text-xl font-bold text-gray-900">All Categories</h2><p class="text-xs text-gray-500">Browse all medical supplies</p></div>`;
+            } else if (state.page === 'cart') {
+                h.innerHTML = `<div class="px-4 py-3 bg-white border-b border-gray-100 flex items-center gap-3"><button onclick="navigateTo('home')" class="text-gray-700"><i data-lucide="arrow-left" class="w-6 h-6"></i></button><div><h2 class="text-xl font-bold text-gray-900">My Cart</h2><p class="text-xs text-gray-500">${cartCount} Items</p></div></div>`;
+            } else if (state.page === 'profile') {
+                h.innerHTML = `<div class="px-4 py-3 bg-white border-b border-gray-100 flex items-center gap-3"><button onclick="navigateTo('home')" class="text-gray-700"><i data-lucide="arrow-left" class="w-6 h-6"></i></button><div><h2 class="text-xl font-bold text-gray-900">Account</h2><p class="text-xs text-gray-500">Manage your profile</p></div></div>`;
+            } else if (state.page === 'chat') {
+                h.innerHTML = `<div class="px-4 py-3 bg-white border-b border-gray-100 flex items-center justify-between"><div><h2 class="text-xl font-bold text-gray-900">Health Chat</h2><p class="text-xs text-gray-500">Admin: ${currentUser ? currentUser.name : ''}</p></div><div class="bg-pharmeasy-teal/10 p-2 rounded-full"><i data-lucide="user-cog" class="w-5 h-5 text-pharmeasy-teal"></i></div></div>`;
+            } else if (state.page === 'chat-thread') {
+                const chat = chats.find(c => c.id === state.activeChat);
+                h.innerHTML = `<div class="px-4 py-3 bg-white border-b border-gray-100 flex items-center gap-3"><button onclick="navigateTo('chat')" class="text-gray-700"><i data-lucide="arrow-left" class="w-6 h-6"></i></button><div class="w-8 h-8 rounded-full overflow-hidden"><img src="${chat?.avatar}" class="w-full h-full object-cover"></div><div><h2 class="text-lg font-bold text-gray-900">${chat?.name || 'Chat'}</h2><p class="text-xs text-pharmeasy-teal font-medium">${chat?.role || 'User'}</p></div></div>`;
+            } else {
+                const t = state.page === 'subcategories' ? state.selectedCategory?.name : state.selectedSubcategory?.name;
+                const s = state.page === 'subcategories' ? (state.selectedCategory?.name === 'Drugs' ? 'Classes of Drugs' : 'Subcategories') : 'Products';
+                h.innerHTML = `<div class="px-4 py-3 flex items-center justify-between"><div class="flex items-center gap-3"><button onclick="goBack()" class="text-gray-700 p-2 hover:bg-gray-100 rounded-lg transition-colors"><i data-lucide="arrow-left" class="w-6 h-6"></i></button><div><h2 class="text-lg font-bold text-gray-900">${t}</h2><p class="text-xs text-gray-500">${s}</p></div></div><div class="relative" onclick="navigateTo('cart')"><i data-lucide="shopping-cart" class="w-6 h-6 text-gray-700"></i>${cartCount > 0 ? `<div class="absolute -top-1 -right-1 cart-badge">${cartCount}</div>` : ''}</div></div>`;
+            }
+        }
+
+        function renderBottomNav() {
+            const cartTotal = state.cart.reduce((a, b) => a + b.quantity, 0);
+            const chatUnread = chats.reduce((a, b) => a + b.unread, 0);
+
+            const n = [
+                { icon: 'home', label: 'Home', active: state.page === 'home', action: "navigateTo('home')" },
+                { icon: 'layout-grid', label: 'Categories', active: state.page === 'categories', action: "navigateTo('categories')" },
+                { icon: 'shopping-cart', label: 'Cart', active: state.page === 'cart', count: cartTotal, action: "navigateTo('cart')" },
+                { icon: 'message-circle', label: 'Chat', active: state.page.includes('chat'), count: chatUnread, action: "navigateTo('chat')" },
+                { icon: 'play-square', label: 'New', active: state.page === 'new-products', action: "navigateTo('new-products')" }
+            ];
+            document.getElementById('bottom-nav').innerHTML = n.map(i => `<div class="flex flex-col items-center gap-1 cursor-pointer" onclick="${i.action}"><div class="relative ${i.active ? 'text-pharmeasy-teal' : 'text-gray-400'}"><i data-lucide="${i.icon}" class="w-6 h-6 ${i.active && (i.icon === 'home' || i.icon === 'play-square' || i.icon === 'layout-grid') ? 'fill-current' : ''}"></i>${i.count > 0 ? `<span class="absolute -top-1 -right-1 bg-pharmeasy-orange text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full border-2 border-white font-bold">${i.count}</span>` : ''}</div><span class="text-[10px] font-medium ${i.active ? 'text-pharmeasy-teal' : 'text-gray-500'}">${i.label}</span></div>`).join('');
+        }
+
+        function renderHome() {
+            document.getElementById('main-content').innerHTML = `<div class="p-4 space-y-5"><div class="hero-carousel">${heroSlides.map((slide, i) => `<div class="hero-slide ${i === 0 ? 'active' : ''}"><div class="absolute inset-0"><img src="${slide.image}" class="w-full h-full object-cover rounded-2xl"></div><div class="gradient-overlay rounded-2xl"></div><div class="relative z-10 h-full flex flex-col justify-end p-6 bg-gradient-to-t from-black/80 via-black/30 to-transparent rounded-2xl"><div><h2 class="text-2xl font-bold text-white mb-1">${slide.title}</h2><p class="text-white/90 text-sm mb-1">${slide.subtitle}</p></div></div></div>`).join('')}<div class="carousel-indicators">${heroSlides.map((_, i) => `<div class="indicator ${i === 0 ? 'active' : ''}" onclick="goToSlide(${i})"></div>`).join('')}</div></div><div id="categories-section"><div class="flex items-center justify-between mb-3"><h2 class="section-title">Shop by Category</h2></div><div class="grid grid-cols-2 gap-3">${categories.map((c, i) => `<div onclick="openCategory(${i})" class="category-card pharmeasy-card overflow-hidden cursor-pointer active:scale-95"><div class="relative h-32 overflow-hidden"><img src="${c.image}" alt="${c.name}" class="category-image"><div class="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent"></div><div class="absolute bottom-0 left-0 right-0 p-3"><div class="flex items-center gap-2 mb-1"><div class="${c.color} w-7 h-7 rounded-lg flex items-center justify-center"><i data-lucide="${c.iconName}" class="w-4 h-4 text-white"></i></div><p class="category-title text-white">${c.name}</p></div></div></div></div>`).join('')}</div></div><div><div class="flex items-center justify-between mb-3"><div class="flex items-center gap-2"><div class="bg-pharmeasy-orange p-2 rounded-lg"><i data-lucide="trending-up" class="w-4 h-4 text-white"></i></div><h2 class="section-title">Flash Deals</h2></div><button class="text-pharmeasy-teal text-sm font-semibold">See All</button></div><div class="grid grid-cols-2 gap-3">${categories[0].subcategories[0].products.slice(0, 4).map(p => `<div class="product-card"><div class="p-3"><div class="relative rounded-lg overflow-hidden h-40 mb-2"><img src="${p.image}" alt="${p.name}" class="w-full h-full object-cover"><div class="absolute top-2 left-2 discount-badge">${p.discount}</div></div><h3 class="product-name mb-1 line-clamp-2 h-9">${p.name}</h3><div class="flex items-center gap-1 mb-2"><i data-lucide="star" class="w-3 h-3 fill-yellow-400 text-yellow-400"></i><span class="text-xs font-medium text-gray-700">${p.rating}</span><span class="text-xs text-gray-400">(${p.reviews})</span></div><div class="mb-3"><div class="price-current">${p.price}</div><div class="price-original">${p.originalPrice}</div></div><button onclick="addToCart('${p.id}')" class="w-full pharmeasy-btn text-xs">Add to Cart</button></div></div>`).join('')}</div></div></div>`;
+
+            // Start carousel after rendering
+            setTimeout(() => {
+                startCarousel();
+            }, 100);
+        }
+
+        function renderSearchResults() {
+            const query = state.searchQuery;
+            let results = [];
+            categories.forEach(cat => {
+                cat.subcategories.forEach(sub => {
+                    sub.products.forEach(p => {
+                        if (p.name.toLowerCase().includes(query) || sub.name.toLowerCase().includes(query)) {
+                            results.push(p);
+                        }
+                    });
+                });
+            });
+
+            document.getElementById('main-content').innerHTML = `
+            <div class="p-4">
+                <h3 class="font-bold text-gray-900 mb-4">Search Results for "${query}"</h3>
+                ${results.length === 0 ? '<p class="text-gray-500">No products found.</p>' :
+                    `<div class="grid grid-cols-2 gap-3">
+                    ${results.map(p => `<div class="product-card"><div class="p-3"><div class="relative rounded-lg overflow-hidden h-40 mb-2"><img src="${p.image}" alt="${p.name}" class="w-full h-full object-cover"></div><h3 class="product-name mb-1 line-clamp-2 h-9">${p.name}</h3><div class="mb-3"><div class="price-current">${p.price}</div></div><button onclick="addToCart('${p.id}')" class="w-full pharmeasy-btn text-xs">Add to Cart</button></div></div>`).join('')}
+                </div>`}
+            </div>`;
+        }
+
+        function renderSubcategories() {
+            if (!state.selectedCategory) return;
+            document.getElementById('main-content').innerHTML = `<div class="p-4"><div class="space-y-3">${state.selectedCategory.subcategories.map((s, i) => `<div onclick="openSubcategory(${i})" class="pharmeasy-card overflow-hidden cursor-pointer active:scale-95"><div class="relative h-40 overflow-hidden"><img src="${s.image}" alt="${s.name}" class="category-image"><div class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div><div class="absolute bottom-0 left-0 right-0 p-4"><div class="flex items-center justify-between"><div><p class="text-lg font-bold text-white mb-1">${s.name}</p></div><div class="bg-white/20 backdrop-blur-sm p-2 rounded-lg"><i data-lucide="chevron-right" class="w-5 h-5 text-white"></i></div></div></div></div></div>`).join('')}</div></div>`;
+        }
+
+        function renderProducts() {
+            if (!state.selectedSubcategory) return;
+            document.getElementById('main-content').innerHTML = `<div class="p-4"><div class="grid grid-cols-2 gap-3">${state.selectedSubcategory.products.map(p => `<div class="product-card"><div class="p-3"><div class="relative rounded-lg overflow-hidden h-40 mb-2"><img src="${p.image}" alt="${p.name}" class="w-full h-full object-cover"></div><h3 class="product-name mb-1 line-clamp-2 h-9">${p.name}</h3><p class="company-name mb-2">${p.company}</p><div class="flex items-center gap-1 mb-2"><i data-lucide="star" class="w-3 h-3 fill-yellow-400 text-yellow-400"></i><span class="text-xs font-medium text-gray-700">${p.rating}</span><span class="text-xs text-gray-400">(${p.reviews})</span></div><div class="mb-2"><div class="price-current">${p.price}</div></div><p class="text-xs text-gray-500 mb-3 font-medium">${p.unit}</p><button onclick="addToCart('${p.id}')" class="w-full pharmeasy-btn text-xs">Add to Cart</button></div></div>`).join('')}</div></div>`;
+        }
+
+        function renderCart() {
+            const h = document.getElementById('main-content');
+            if (state.cart.length === 0) {
+                h.innerHTML = `<div class="flex flex-col items-center justify-center h-full p-6 text-center"><div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4"><i data-lucide="shopping-cart" class="w-10 h-10 text-gray-400"></i></div><h3 class="text-lg font-bold text-gray-900 mb-2">Your Cart is Empty</h3><p class="text-gray-500 text-sm mb-6">Looks like you haven't added any medical supplies yet.</p><button onclick="navigateTo('home')" class="pharmeasy-btn w-48">Start Shopping</button></div>`;
+                return;
+            }
+
+            h.innerHTML = `<div class="p-4 pb-24"><div class="space-y-4">${state.cart.map(item => `
+                <div class="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex gap-3">
+                    <img src="${item.product.image}" class="w-20 h-20 bg-gray-100 rounded-lg object-cover">
+                    <div class="flex-1">
+                        <div class="flex justify-between items-start">
+                             <h4 class="text-sm font-semibold text-gray-900 line-clamp-2">${item.product.name}</h4>
+                             <button onclick="removeFromCart('${item.product.id}')" class="text-gray-400 hover:text-red-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        </div>
+                        <p class="text-xs text-gray-500 mb-2">${item.product.company}</p>
+                        <div class="flex items-center justify-between mt-2">
+                             <div class="price-current">${item.product.price}</div>
+                             <div class="flex items-center gap-3 bg-gray-50 rounded-lg px-2 py-1">
+                                 <button onclick="updateQuantity('${item.product.id}', -1)" class="text-gray-600 font-bold">-</button>
+                                 <span class="text-sm font-medium text-gray-900">${item.quantity}</span>
+                                 <button onclick="updateQuantity('${item.product.id}', 1)" class="text-pharmeasy-teal font-bold">+</button>
+                             </div>
+                        </div>
+                    </div>
+                </div>`).join('')}
+            </div>
+            
+             <div class="fixed bottom-[70px] left-0 right-0 bg-white border-t border-gray-100 p-4 max-w-md mx-auto">
+                <button onclick="createOrder()" class="w-full pharmeasy-btn py-3 text-base shadow-lg shadow-teal-700/20">Order Now</button>
+             </div>
+            </div>`;
+        }
+
+        function renderChat() {
+            if (!currentUser) {
+                document.getElementById('main-content').innerHTML = `
+                <div class="flex flex-col items-center justify-center h-full p-6 text-center">
+                    <div class="w-24 h-24 bg-blue-50 rounded-full flex items-center justify-center mb-4">
+                        <i data-lucide="lock" class="w-10 h-10 text-blue-400"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-900 mb-2">Login Required</h3>
+                    <p class="text-gray-500 text-sm mb-6">Please login to access support chat.</p>
+                    <button onclick="navigateTo('profile')" class="pharmeasy-btn w-48">Go to Login</button>
+                </div>`;
+                return;
+            }
+            // New Chat Button for Clients
+            const isUserAdmin = currentUser.role === 'admin';
+
+            document.getElementById('main-content').innerHTML = `
+             <div class="p-4 space-y-2">
+                <div class="bg-blue-50 border border-blue-100 p-3 rounded-lg flex items-center gap-3 mb-4">
+                     <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">ME</div>
+                     <div>
+                         <p class="text-sm font-bold text-blue-900">${currentUser.name}</p>
+                         <p class="text-xs text-blue-700">${currentUser.email}</p>
+                     </div>
+                </div>
+
+                ${!isUserAdmin ? `
+                <button onclick="startNewChat()" class="w-full mb-4 pharmeasy-btn bg-pharmeasy-teal text-white py-3 rounded-lg shadow-md flex items-center justify-center gap-2">
+                    <i data-lucide="message-plus" class="w-5 h-5"></i>
+                    Start Support Chat
+                </button>
+                ` : ''}
+
+                ${chats.length === 0 ? `
+                    <div class="text-center py-10 text-gray-400">
+                        <i data-lucide="message-square-off" class="w-12 h-12 mx-auto mb-2 opacity-50"></i>
+                        <p>No active conversations</p>
+                    </div>
+                ` : ''}
+
+                ${chats.map(chat => `
+                <div onclick="navigateTo('chat-thread', {chatId: '${chat.id}'})" class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4 cursor-pointer hover:bg-gray-50 transition-colors">
+                    <div class="relative">
+                        <img src="${chat.avatar || 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=100&h=100&fit=crop'}" class="w-12 h-12 rounded-full object-cover">
+                        ${chat.unread > 0 ? `<div class="absolute -top-1 -right-1 bg-pharmeasy-orange text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full border-2 border-white font-bold">${chat.unread}</div>` : ''}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex justify-between items-start mb-1">
+                            <h4 class="font-bold text-gray-900 text-sm truncate">${isUserAdmin ? chat.userName : 'Support Team'}</h4>
+                            <span class="text-[10px] text-gray-400 whitespace-nowrap">${chat.time}</span>
+                        </div>
+                        <p class="text-xs text-gray-500 truncate font-medium">${chat.lastMessage || 'No messages yet'}</p>
+                        ${isUserAdmin ? `<p class="text-[10px] text-pharmeasy-teal mt-1">Client</p>` : ''}
+                    </div>
+                </div>
+                `).join('')}
+             </div>`;
+        }
+
+        async function startNewChat() {
+            if (!currentUser) return alert('Please login first');
+            try {
+                // Check if existing chat
+                const { data: existingChats } = await window.supabase.from('chats')
+                    .select('id')
+                    .eq('user_id', currentUser.uid)
+                    .limit(1);
+
+                if (existingChats && existingChats.length > 0) {
+                    navigateTo('chat-thread', { chatId: existingChats[0].id });
+                    return;
+                }
+
+                const { data: newChat, error } = await window.supabase.from('chats').insert({
+                    user_id: currentUser.uid,
+                    user_name: currentUser.name,
+                    admin_ids: adminEmails,
+                    last_message: 'Chat started',
+                    last_message_time: new Date().toISOString(),
+                    unread_admin: 1,
+                    unread_client: 0,
+                    avatar: currentUser.photoURL || null
+                }).select().single();
+
+                if (error) throw error;
+                navigateTo('chat-thread', { chatId: newChat.id });
+
+            } catch (e) {
+                console.error(e);
+                alert('Error starting chat');
+            }
+        }
+
+
+        let currentMessages = [];
+
+        function renderChatThread() {
+            const chatId = state.activeChat;
+            if (!chatId) return;
+            const isUserAdmin = currentUser.role === 'admin';
+
+            // Subscribe to messages if not already
+            if (messagesUnsubscribe) {
+                messagesUnsubscribe.unsubscribe();
+                messagesUnsubscribe = null;
+            }
+
+            fetchMessages(chatId);
+
+            // Realtime
+            const channel = window.supabase.channel('public:messages:' + chatId);
+            channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `chat_id=eq.${chatId}` }, (payload) => {
+                fetchMessages(chatId);
+            }).subscribe();
+
+            messagesUnsubscribe = channel;
+
+            // Reset unread count
+            const updateObj = isUserAdmin ? { unread_admin: 0 } : { unread_client: 0 };
+            window.supabase.from('chats').update(updateObj).eq('id', chatId).then(() => { });
+
+            // Initial Render of container
+            document.getElementById('main-content').innerHTML = `
+             <div class="flex flex-col h-full relative">
+                 <div id="messages-container" class="flex-1 p-4 space-y-4 overflow-y-auto pb-20">
+                    <div class="flex items-center justify-center h-full">
+                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-pharmeasy-teal"></div>
+                    </div>
+                 </div>
+                 <div class="fixed bottom-0 left-0 right-0 p-3 bg-white border-t border-gray-100 max-w-md mx-auto">
+                     <div class="flex items-center gap-2">
+                         <button class="p-2 text-gray-400 hover:bg-gray-100 rounded-full"><i data-lucide="paperclip" class="w-5 h-5"></i></button>
+                         <input type="text" id="message-input" onkeypress="if(event.key === 'Enter') sendMessage()" placeholder="Type a message..." class="flex-1 bg-gray-100 border-none rounded-full px-4 py-2.5 text-sm focus:ring-1 focus:ring-pharmeasy-teal focus:bg-white transition-all">
+                         <button onclick="sendMessage()" class="p-2.5 bg-pharmeasy-teal text-white rounded-full hover:bg-teal-700 shadow-md transform active:scale-95 transition-all"><i data-lucide="send" class="w-4 h-4"></i></button>
+                     </div>
+                 </div>
+             </div>`;
+        }
+
+        async function fetchMessages(chatId) {
+            const { data, error } = await window.supabase.from('messages').select('*').eq('chat_id', chatId).order('timestamp', { ascending: true });
+            if (error) {
+                console.error(error);
+                return;
+            }
+            currentMessages = data.map(m => ({
+                id: m.id,
+                text: m.text,
+                senderId: m.sender_id,
+                senderName: m.sender_name,
+                timestamp: m.timestamp ? new Date(m.timestamp) : null
+            }));
+            updateChatThreadUI();
+        }
+
+        function updateChatThreadUI() {
+            const container = document.getElementById('messages-container');
+            if (!container) return; // Switched page
+
+            if (currentMessages.length === 0) {
+                container.innerHTML = `
+                      <div class="flex flex-col items-center justify-center h-64 text-gray-400">
+                           <i data-lucide="message-square" class="w-8 h-8 mb-2 opacity-50"></i>
+                           <p class="text-sm">No messages yet</p>
+                           <p class="text-xs">Start the conversation!</p>
+                      </div>`;
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="text-center text-xs text-gray-400 my-4">Conversation Started</div>
+                ${currentMessages.map(m => {
+                const isMe = m.senderId === currentUser.uid;
+                const time = m.timestamp ? new Date(m.timestamp.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Sending...';
+                return `
+                      <div class="flex ${isMe ? 'justify-end' : 'justify-start'}">
+                          <div class="${isMe ? 'bg-pharmeasy-teal text-white rounded-tr-none' : 'bg-white border border-gray-100 text-gray-800 rounded-tl-none'} rounded-xl px-4 py-2 max-w-[80%] shadow-sm text-sm">
+                              <p>${m.text}</p>
+                              <p class="text-[10px] ${isMe ? 'text-teal-100' : 'text-gray-400'} mt-1 text-right">${time}</p>
+                          </div>
+                      </div>
+                  `;
+            }).join('')}
+            `;
+            container.scrollTop = container.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('message-input');
+            const text = input.value.trim();
+            if (!text) return;
+
+            const chatId = state.activeChat;
+            if (!chatId) return;
+
+            input.value = ''; // Clear locally
+
+            try {
+                // Add message
+                const { error } = await window.supabase.from('messages').insert({
+                    chat_id: chatId,
+                    text: text,
+                    sender_id: currentUser.uid,
+                    sender_name: currentUser.name,
+                    timestamp: new Date().toISOString()
+                });
+
+                if (error) throw error;
+
+                // Update chat metadata
+                const isUserAdmin = currentUser.role === 'admin';
+                const updateData = {
+                    last_message: text,
+                    last_message_time: new Date().toISOString(),
+                    unread_admin: isUserAdmin ? 0 : 1,
+                    unread_client: isUserAdmin ? 1 : 0
+                };
+
+                await window.supabase.from('chats').update(updateData).eq('id', chatId);
+
+            } catch (e) {
+                console.error("Send Error", e);
+                alert("Failed to send");
+            }
+        }
+
+
+        function renderNewProducts() {
+            const posts = [
+                {
+                    type: 'video',
+                    title: 'Breakthrough in Malaria Treatment',
+                    description: 'New research shows promising results for the latest anti-malaria drug.',
+                    image: 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=800&h=600&fit=crop',
+                    views: '1.2k',
+                    time: '2 hours ago'
+                },
+                {
+                    type: 'image',
+                    title: 'New Surgical Instruments',
+                    description: 'High-precision stainless steel surgical instruments now in stock.',
+                    image: 'https://images.unsplash.com/photo-1581594693702-fbdc51b2763b?w=800&h=600&fit=crop',
+                    views: '856',
+                    time: '5 hours ago'
+                },
+                {
+                    type: 'video',
+                    title: 'Digital BP Monitor Setup',
+                    description: 'Quick tutorial on setting up the new MedTech BP monitor.',
+                    image: 'https://images.unsplash.com/photo-1615486511484-92e172cc4fe0?w=800&h=600&fit=crop',
+                    views: '2.4k',
+                    time: '1 day ago'
+                },
+                {
+                    type: 'image',
+                    title: 'Antibiotics Restocked',
+                    description: 'Full range of antibiotics available for bulk order.',
+                    image: 'https://images.unsplash.com/photo-1587854692152-cbe660dbde88?w=800&h=600&fit=crop',
+                    views: '3.1k',
+                    time: '1 day ago'
+                },
+                {
+                    type: 'video',
+                    title: 'Diabetes Management',
+                    description: 'Expert tips on managing blood sugar levels effectively.',
+                    image: 'https://images.unsplash.com/photo-1579154204845-72d0e10a4c0f?w=800&h=600&fit=crop',
+                    views: '5k',
+                    time: '2 days ago'
+                },
+                {
+                    type: 'image',
+                    title: 'Wellness Supplements',
+                    description: 'Boost your immunity with our new range of vitamins.',
+                    image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=800&h=600&fit=crop',
+                    views: '900',
+                    time: '2 days ago'
+                },
+                {
+                    type: 'video',
+                    title: 'First Aid Training',
+                    description: 'Learn the basics of CPR and emergency response.',
+                    image: 'https://images.unsplash.com/photo-1603398938378-e54eab446dde?w=800&h=600&fit=crop',
+                    views: '1.5k',
+                    time: '3 days ago'
+                },
+                {
+                    type: 'image',
+                    title: 'Pediatric Care',
+                    description: 'Specialized equipment for pediatric wards.',
+                    image: 'https://images.unsplash.com/photo-1631815588090-d4bfec5b1ccb?w=800&h=600&fit=crop',
+                    views: '1.2k',
+                    time: '3 days ago'
+                },
+                {
+                    type: 'video',
+                    title: 'Understanding Hypertension',
+                    description: 'Dr. Semakula explains the risks and prevention.',
+                    image: 'https://images.unsplash.com/photo-1576765607924-3f7b8410a787?w=800&h=600&fit=crop',
+                    views: '4.2k',
+                    time: '4 days ago'
+                },
+                {
+                    type: 'image',
+                    title: 'Dental Care Kits',
+                    description: 'Professional dental tools for clinics.',
+                    image: 'https://images.unsplash.com/photo-1584515933487-779824d29309?w=800&h=600&fit=crop',
+                    views: '700',
+                    time: '4 days ago'
+                },
+                {
+                    type: 'video',
+                    title: 'Fitness & Recovery',
+                    description: 'Top gear for physiotherapy and rehabilitation.',
+                    image: 'https://images.unsplash.com/photo-1581594549595-35f6edc7b762?w=800&h=600&fit=crop',
+                    views: '2.1k',
+                    time: '5 days ago'
+                },
+                {
+                    type: 'image',
+                    title: 'Skin Care Pharma',
+                    description: 'Dermatologically tested skin care products.',
+                    image: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=800&h=600&fit=crop',
+                    views: '1.8k',
+                    time: '5 days ago'
+                }
+            ];
+
+            document.getElementById('main-content').innerHTML = `<div class="p-4 space-y-6 mb-20">
+                ${posts.map(post => `
+                <div class="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100">
+                    <div class="flex items-center p-3 gap-3">
+                        <div class="w-10 h-10 rounded-full bg-pharmeasy-teal/10 flex items-center justify-center">
+                            <i data-lucide="${post.type === 'video' ? 'play-circle' : 'image'}" class="w-5 h-5 text-pharmeasy-teal"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-gray-900 text-sm">${post.title}</h3>
+                            <p class="text-xs text-gray-500">${post.time} • ${post.views} views</p>
+                        </div>
+                    </div>
+                    
+                    <div class="relative w-full h-48 bg-gray-100">
+                         <img src="${post.image}" class="w-full h-full object-cover">
+                         ${post.type === 'video' ? `<div class="absolute inset-0 flex items-center justify-center bg-black/20"><div class="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center pl-1"><i data-lucide="play" class="w-6 h-6 text-pharmeasy-teal fill-current"></i></div></div>` : ''}
+                    </div>
+
+                    <div class="p-3">
+                        <p class="text-gray-600 text-sm leading-relaxed">${post.description}</p>
+                        <div class="flex items-center gap-4 mt-3 pt-3 border-t border-gray-100">
+                            <button class="flex items-center gap-1.5 text-gray-500 hover:text-pharmeasy-teal transition-colors">
+                                <i data-lucide="heart" class="w-4 h-4"></i>
+                                <span class="text-xs font-medium">Like</span>
+                            </button>
+                            <button class="flex items-center gap-1.5 text-gray-500 hover:text-pharmeasy-teal transition-colors">
+                                <i data-lucide="message-circle" class="w-4 h-4"></i>
+                                <span class="text-xs font-medium">Comment</span>
+                            </button>
+                            <button class="flex items-center gap-1.5 text-gray-500 hover:text-pharmeasy-teal transition-colors ml-auto">
+                                <i data-lucide="share-2" class="w-4 h-4"></i>
+                                <span class="text-xs font-medium">Share</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                `).join('')}
+            </div>`;
+        }
+
+
+
+        function renderCategories() {
+            document.getElementById('main-content').innerHTML = `<div class="p-4 space-y-4 pb-24">${categories.map((c, i) => `<div onclick="openCategory(${i})" class="category-card pharmeasy-card overflow-hidden cursor-pointer active:scale-95 group"><div class="relative h-48 w-full overflow-hidden"><img src="${c.image}" alt="${c.name}" class="category-image w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"><div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div><div class="absolute bottom-0 left-0 right-0 p-5"><div class="flex items-center justify-between"><div class="flex items-center gap-4"><div class="${c.color} w-12 h-12 rounded-xl flex items-center justify-center shadow-lg"><i data-lucide="${c.iconName}" class="w-6 h-6 text-white"></i></div><div><h3 class="text-xl font-bold text-white leading-tight">${c.name}</h3><p class="text-sm text-gray-300 mt-1">${c.subcategories.length} Collections</p></div></div><div class="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center"><i data-lucide="arrow-right" class="w-5 h-5 text-white"></i></div></div></div></div></div>`).join('')}</div>`;
+        }
+
+        function renderProfile() {
+            const h = document.getElementById('main-content');
+            if (currentUser) {
+                // Logged In View
+                h.innerHTML = `
+                <div class="p-6">
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col items-center mb-6">
+                         <div class="w-24 h-24 rounded-full bg-pharmeasy-teal/10 flex items-center justify-center text-pharmeasy-teal text-3xl font-bold mb-4 overflow-hidden">
+                            ${currentUser.photoURL ? `<img src="${currentUser.photoURL}" class="w-full h-full object-cover">` : currentUser.name.charAt(0)}
+                         </div>
+                         <h2 class="text-xl font-bold text-gray-900">${currentUser.name}</h2>
+                         <p class="text-sm text-gray-500 mb-2">${currentUser.email}</p>
+                         ${currentUser.role === 'admin' ? '<span class="px-3 py-1 bg-pharmeasy-orange/10 text-pharmeasy-orange text-xs font-bold rounded-full border border-pharmeasy-orange/20">ADMIN</span>' : '<span class="px-3 py-1 bg-gray-100 text-gray-500 text-xs font-medium rounded-full">User</span>'}
+                    </div>
+
+                    ${currentUser.role === 'admin' ? `
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
+                        <h3 class="font-bold text-gray-900 mb-3">Admin Actions</h3>
+                        <button onclick="seedDatabase()" class="w-full text-left p-3 rounded-lg hover:bg-gray-50 flex items-center gap-3 transition-colors">
+                             <i data-lucide="database" class="w-5 h-5 text-pharmeasy-teal"></i>
+                             <span class="text-sm font-medium text-gray-700">Seed Database</span>
+                        </button>
+                    </div>
+                    ` : ''}
+
+                    <button onclick="logout()" class="w-full pharmeasy-btn bg-red-500 hover:bg-red-600 text-white">Log Out</button>
+                </div>`;
+            } else {
+                // Login/Register View
+                h.innerHTML = `
+                <div class="p-6">
+                     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                         <h2 class="text-2xl font-bold text-gray-900 mb-6 text-center">Welcome to Glo-Med</h2>
+                         
+                         <div class="flex gap-4 mb-6 border-b border-gray-100">
+                             <button onclick="document.getElementById('login-form').classList.remove('hidden'); document.getElementById('register-form').classList.add('hidden'); this.classList.add('text-pharmeasy-teal', 'border-b-2', 'border-pharmeasy-teal'); this.nextElementSibling.classList.remove('text-pharmeasy-teal', 'border-b-2', 'border-pharmeasy-teal');" class="flex-1 pb-3 font-semibold text-pharmeasy-teal border-b-2 border-pharmeasy-teal transition-all">Login</button>
+                             <button onclick="document.getElementById('login-form').classList.add('hidden'); document.getElementById('register-form').classList.remove('hidden'); this.classList.add('text-pharmeasy-teal', 'border-b-2', 'border-pharmeasy-teal'); this.previousElementSibling.classList.remove('text-pharmeasy-teal', 'border-b-2', 'border-pharmeasy-teal');" class="flex-1 pb-3 font-semibold text-gray-400 transition-all">Register</button>
+                         </div>
+
+                         <!-- Login Form -->
+                         <div id="login-form" class="space-y-4">
+                             <div>
+                                 <label class="block text-xs font-bold text-gray-700 mb-1">Email</label>
+                                 <input type="email" id="login-email" class="w-full pharmeasy-search px-4 py-3 text-sm" placeholder="Enter your email">
+                             </div>
+                             <div>
+                                 <label class="block text-xs font-bold text-gray-700 mb-1">Password</label>
+                                 <input type="password" id="login-password" class="w-full pharmeasy-search px-4 py-3 text-sm" placeholder="Enter password">
+                             </div>
+                             <button onclick="login()" class="w-full pharmeasy-btn py-3 mt-2">Sign In</button>
+                             <div class="relative py-2">
+                                 <div class="absolute inset-0 flex items-center"><span class="w-full border-t border-gray-100"></span></div>
+                                 <div class="relative flex justify-center text-xs uppercase"><span class="bg-white px-2 text-gray-500">Or continue with</span></div>
+                             </div>
+                             <button onclick="googleLogin()" class="w-full bg-white border border-gray-200 text-gray-700 font-semibold py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-gray-50 transition-all">
+                                 <svg class="w-5 h-5" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.84z" fill="#FBBC05"/><path d="M12 4.66c1.61 0 3.06.56 4.21 1.64l3.15-3.15C17.45 1.19 14.97 0 12 0 7.7 0 3.99 2.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+                                 Google
+                             </button>
+
+                             <!-- Temporary Debug Button -->
+                             <div class="mt-8 pt-6 border-t border-gray-100">
+                                <h3 class="text-center text-sm font-bold text-gray-400 uppercase mb-4">Developer Tools</h3>
+                                <button onclick="seedDatabase()" class="w-full bg-gray-800 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-gray-900 transition-all">
+                                    <i data-lucide="database" class="w-5 h-5"></i>
+                                    Seed Database Now
+                                </button>
+                                <p class="text-xs text-center text-gray-500 mt-2">Click this to upload data to Firebase without logging in.</p>
+                             </div>
+                         </div>
+
+                         <!-- Register Form -->
+                         <div id="register-form" class="space-y-4 hidden">
+                             <div>
+                                 <label class="block text-xs font-bold text-gray-700 mb-1">Full Name</label>
+                                 <input type="text" id="reg-name" class="w-full pharmeasy-search px-4 py-3 text-sm" placeholder="Your name">
+                             </div>
+                             <div>
+                                 <label class="block text-xs font-bold text-gray-700 mb-1">Email</label>
+                                 <input type="email" id="reg-email" class="w-full pharmeasy-search px-4 py-3 text-sm" placeholder="Enter your email">
+                             </div>
+                             <div>
+                                 <label class="block text-xs font-bold text-gray-700 mb-1">Password</label>
+                                 <input type="password" id="reg-password" class="w-full pharmeasy-search px-4 py-3 text-sm" placeholder="Create password (min 6 chars)">
+                             </div>
+                             <button onclick="register()" class="w-full pharmeasy-btn py-3 mt-2">Create Account</button>
+                         </div>
+                     </div>
+                </div>`;
+            }
+        }
+
+        window.login = async function () {
+            const email = document.getElementById('login-email').value;
+            const pass = document.getElementById('login-password').value;
+            try {
+                const { data, error } = await window.supabase.auth.signInWithPassword({
+                    email: email,
+                    password: pass,
+                });
+                if (error) throw error;
+                // Listener will update UI
+            } catch (error) {
+                alert("Login failed: " + error.message);
+                console.error("Login Error:", error);
+            }
+        };
+
+        window.register = async function () {
+            const name = document.getElementById('reg-name').value;
+            const email = document.getElementById('reg-email').value;
+            const pass = document.getElementById('reg-password').value;
+            if (!name) return alert("Name is required");
+
+            try {
+                const { data, error } = await window.supabase.auth.signUp({
+                    email: email,
+                    password: pass,
+                    options: {
+                        data: {
+                            full_name: name,
+                            name: name
+                        }
+                    }
+                });
+                if (error) throw error;
+                alert("Registration successful! Please check your email to verify if required.");
+            } catch (error) {
+                alert("Registration failed: " + error.message);
+                console.error("Registration Error:", error);
+            }
+        };
+
+        window.googleLogin = async function () {
+            try {
+                const { data, error } = await window.supabase.auth.signInWithOAuth({
+                    provider: 'google',
+                    options: {
+                        redirectTo: window.location.href
+                    }
+                });
+                if (error) throw error;
+            } catch (error) {
+                alert("Google Login failed: " + error.message);
+                console.error("Google Login Error:", error);
+            }
+        };
+
+        window.logout = async function () {
+            try {
+                const { error } = await window.supabase.auth.signOut();
+                if (error) throw error;
+            } catch (error) {
+                console.error("Logout Error:", error);
+            }
+        };
+
+        function handleAuthChange(session) {
+            if (session?.user) {
+                const user = session.user;
+                const isAdmin = adminEmails.includes(user.email);
+                currentUser = {
+                    name: user.user_metadata.full_name || user.user_metadata.name || user.email.split('@')[0],
+                    email: user.email,
+                    role: isAdmin ? 'admin' : 'user',
+                    photoURL: user.user_metadata.avatar_url || user.user_metadata.picture,
+                    uid: user.id
+                };
+                console.log("User logged in:", currentUser);
+                if (state.page === 'profile') updateUI();
+                subscribeToChats();
+            } else {
+                currentUser = null;
+                console.log("User logged out");
+                if (state.page === 'profile') updateUI();
+                chats = [];
+                if (chatsUnsubscribe) chatsUnsubscribe();
+            }
+        }
+
+        // Auth Listener
+        window.addEventListener('load', () => {
+            window.supabase.auth.getSession().then(({ data: { session } }) => {
+                handleAuthChange(session);
+            });
+
+            window.supabase.auth.onAuthStateChange((_event, session) => {
+                handleAuthChange(session);
+            });
+        });
+
+        function updateUI() {
+            if (state.page !== 'home') {
+                stopCarousel();
+            }
+
+            // Cleanup message listener if leaving chat thread
+            if (state.page !== 'chat-thread' && messagesUnsubscribe) {
+                messagesUnsubscribe();
+                messagesUnsubscribe = null;
+            }
+
+            renderHeader();
+            if (state.page === 'home') renderHome();
+            else if (state.page === 'categories') renderCategories();
+            else if (state.page === 'subcategories') renderSubcategories();
+            else if (state.page === 'products') renderProducts();
+            else if (state.page === 'new-products') renderNewProducts();
+            else if (state.page === 'search-results') renderSearchResults();
+            else if (state.page === 'cart') renderCart();
+            else if (state.page === 'chat') renderChat();
+            else if (state.page === 'chat-thread') renderChatThread();
+            else if (state.page === 'profile') renderProfile();
+            renderBottomNav();
+            lucide.createIcons();
+            if (state.page !== 'home') document.getElementById('main-content').scrollTop = 0;
+            console.log("Glo-Med: Version 1.1");
+        }
+
+        try {
+            updateUI();
+        } catch (e) {
+            console.error(e);
+            alert('App Start Error: ' + e.message);
+        }
+
+        // Seed Database Function (Stubbbed for Supabase)
+        async function seedDatabase() {
+            alert("Database seeding is not yet implemented for Supabase. Please use the Supabase Dashboard SQL Editor to import data.");
+        }
+    </script>
+</body>
+
+</html>
