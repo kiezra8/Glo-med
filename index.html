@@ -7,7 +7,7 @@
     <title>Glo-Med Search</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
+
     <!-- Supabase SDK -->
     <script type="module">
         import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -283,6 +283,11 @@
             background: linear-gradient(135deg, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.1));
         }
     </style>
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#10847E">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 </head>
 
 <body class="flex justify-center min-h-screen" style="background: #F7F8FA;">
@@ -291,6 +296,25 @@
         <main id="main-content" class="flex-1 overflow-y-auto pb-20 hide-scrollbar" style="background: #F7F8FA;"></main>
         <nav id="bottom-nav" class="fixed bottom-0 w-full max-w-md bottom-nav flex justify-around py-3 z-50 px-2">
         </nav>
+    </div>
+
+    <!-- Edit Modal -->
+    <div id="edit-modal" class="fixed inset-0 bg-black/50 z-[60] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl w-full max-w-sm overflow-hidden shadow-2xl">
+            <div class="px-4 py-3 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <h3 id="edit-modal-title" class="font-bold text-gray-900">Edit Item</h3>
+                <button onclick="closeEditModal()" class="text-gray-500 hover:text-gray-700"><i data-lucide="x"
+                        class="w-5 h-5"></i></button>
+            </div>
+            <div id="edit-modal-content" class="p-4 space-y-3">
+                <!-- Dynamic Content -->
+            </div>
+            <div class="px-4 py-3 bg-gray-50 flex gap-3">
+                <button onclick="closeEditModal()"
+                    class="flex-1 pharmeasy-btn bg-gray-200 text-gray-700 hover:bg-gray-300">Cancel</button>
+                <button id="edit-save-btn" class="flex-1 pharmeasy-btn">Save Changes</button>
+            </div>
+        </div>
     </div>
     <script>
         window.onerror = function (msg, url, line) {
@@ -449,7 +473,7 @@
             };
         });
 
-        const categories = [
+        let categories = [
             {
                 iconName: 'pill', name: 'Drugs', color: 'bg-blue-500',
                 image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400&h=400&fit=crop',
@@ -525,6 +549,7 @@
         // Chat Data Mock
         // Create a reactive chats array
         let chats = [];
+        let orders = [];
         let messagesUnsubscribe = null;
         let chatsUnsubscribe = null;
 
@@ -552,6 +577,24 @@
             channel.on('postgres_changes', { event: '*', schema: 'public', table: 'chats' }, (payload) => {
                 // If specific user, filter locally or rely on payload
                 if (!isUserAdmin && payload.new && payload.new.user_id !== currentUser.uid) return;
+
+                // Notification Logic
+                if (payload.new && payload.eventType !== 'DELETE') {
+                    const isMe = payload.new.user_id === currentUser.uid; // Wait, user_id is the client ID.
+                    // If I am admin, I care about unread_admin > 0
+                    // If I am client, I care about unread_client > 0
+
+                    const relevantUnread = isUserAdmin ? payload.new.unread_admin : payload.new.unread_client;
+
+                    // Simple check: if unread count > 0 and I'm not in this chat thread
+                    if (relevantUnread > 0) {
+                        // Check if I'm already in this chat
+                        if (state.page !== 'chat-thread' || state.activeChat !== payload.new.id) {
+                            showToast(`New message from ${isUserAdmin ? payload.new.user_name : 'Support Team'}`);
+                        }
+                    }
+                }
+
                 fetchChats();
             }).subscribe();
 
@@ -612,7 +655,253 @@
                 });
             });
         }
-        populateProducts();
+        // populateProducts(); // Moved to loadData or fallback
+
+
+        async function loadData() {
+            // Show loading state if needed
+            try {
+                const { data: cats, error: catError } = await window.supabase.from('categories').select('*').order('id');
+                if (catError) throw catError;
+
+                if (!cats || cats.length === 0) {
+                    console.log("No categories in DB, using hardcoded");
+                    // populateProducts is already called by default? No, I commented it out.
+                    populateProducts();
+                    updateUI();
+                    return;
+                }
+
+                const { data: subs, error: subError } = await window.supabase.from('subcategories').select('*');
+                const { data: prods, error: prodError } = await window.supabase.from('products').select('*');
+                const { data: ords, error: ordError } = await window.supabase.from('orders').select('*').order('created_at', { ascending: false });
+
+                if (subError) throw subError;
+                if (prodError) throw prodError;
+
+                if (isAdmin && !ordError) {
+                    orders = ords;
+                }
+
+                // Rebuild tree
+                categories = cats.map(c => ({
+                    id: c.id,
+                    name: c.name,
+                    image: c.image,
+                    color: c.color,
+                    iconName: c.icon_name,
+                    subcategories: subs.filter(s => s.category_id === c.id).map(s => ({
+                        id: s.id,
+                        name: s.name,
+                        image: s.image,
+                        products: prods.filter(p => p.subcategory_id === s.id).map(p => ({
+                            id: p.id,
+                            name: p.name,
+                            company: p.company,
+                            price: p.price,
+                            originalPrice: p.original_price,
+                            unit: p.unit,
+                            rating: p.rating,
+                            reviews: p.reviews,
+                            image: p.image
+                        }))
+                    }))
+                }));
+
+                console.log("Loaded data from Supabase:", categories.length);
+                updateUI();
+
+            } catch (e) {
+                console.error("Load Data Error", e);
+                // Fallback
+                populateProducts();
+                updateUI();
+            }
+        }
+
+        // Admin Edit Logic
+        let currentEdit = null;
+
+        async function handleFileUpload(input, targetId) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const msgEl = document.getElementById(`upload-msg-${targetId.replace('edit-', '')}`);
+            if (msgEl) msgEl.innerText = "Uploading...";
+
+            try {
+                const fileName = `uploads/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9]/g, '_')}`;
+                // Assuming 'images' bucket exists. If not, this throws error.
+                const { data, error } = await window.supabase.storage.from('images').upload(fileName, file);
+
+                if (error) throw error;
+
+                // Get Public URL
+                const { data: urlData } = window.supabase.storage.from('images').getPublicUrl(fileName);
+                const publicUrl = urlData.publicUrl;
+
+                document.getElementById(targetId).value = publicUrl;
+                if (msgEl) {
+                    msgEl.innerText = "Upload Complete!";
+                    msgEl.className = "text-[10px] text-green-600 mt-1 font-bold";
+                }
+
+            } catch (e) {
+                console.error("Upload failed", e);
+                if (msgEl) {
+                    msgEl.innerText = "Upload Failed. Ensure 'images' bucket exists.";
+                    msgEl.className = "text-[10px] text-red-600 mt-1";
+                }
+                alert("Upload failed: " + e.message);
+            }
+        }
+
+        function openEditModal(mode, type, id) {
+            const modal = document.getElementById('edit-modal');
+            const title = document.getElementById('edit-modal-title');
+            const content = document.getElementById('edit-modal-content');
+            const saveBtn = document.getElementById('edit-save-btn');
+
+            modal.classList.remove('hidden');
+            currentEdit = { mode, type, id };
+
+            let item = {};
+            let fields = [];
+
+            if (type === 'category') {
+                title.innerText = mode === 'create' ? 'Add New Category' : 'Edit Category';
+                fields = [
+                    { label: 'Name', key: 'name', type: 'text' },
+                    { label: 'Image URL', key: 'image', type: 'text' }
+                ];
+                if (mode === 'edit') {
+                    item = categories.find(c => c.id == id) || categories[id];
+                }
+            } else if (type === 'subcategory') {
+                // Find subcategory
+                for (let c of categories) {
+                    const s = c.subcategories.find(sub => sub.id == id) || c.subcategories[id]; // Warning: ID logic might be tricky if mixed
+                    if (s) { item = s; break; }
+                }
+                title.innerText = mode === 'create' ? 'Add New Collection' : 'Edit Collection';
+                fields = [
+                    { label: 'Name', key: 'name', type: 'text' },
+                    { label: 'Image URL', key: 'image', type: 'text' }
+                ];
+            } else if (type === 'product') {
+                title.innerText = mode === 'create' ? 'Add New Product' : 'Edit Product';
+                fields = [
+                    { label: 'Name', key: 'name', type: 'text' },
+                    { label: 'Company', key: 'company', type: 'text' },
+                    { label: 'Price', key: 'price', type: 'text' },
+                    { label: 'Unit', key: 'unit', type: 'text' },
+                    { label: 'Image URL', key: 'image', type: 'text' }
+                ];
+                if (mode === 'edit') item = getProductById(id);
+            }
+
+            if (mode === 'edit' && !item.id && !item.name) return closeEditModal();
+            currentEdit.item = item;
+
+            content.innerHTML = fields.map(f => `
+                <div class="mb-2">
+                    <label class="block text-xs font-bold text-gray-700 mb-1">${f.label}</label>
+                    <input type="${f.type}" id="edit-${f.key}" value="${item[f.key] || ''}" class="w-full pharmeasy-search px-3 py-2 text-sm" placeholder="Enter ${f.label}">
+                    ${f.key === 'image' ? `
+                    <div class="mt-2 p-2 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+                        <label class="block text-[10px] text-gray-500 mb-1 font-medium">Or upload image</label>
+                        <div class="flex items-center gap-2">
+                            <input type="file" accept="image/*" onchange="handleFileUpload(this, 'edit-${f.key}')" class="block w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-[10px] file:font-semibold file:bg-pharmeasy-teal file:text-white hover:file:bg-teal-600"/>
+                        </div>
+                        <p class="text-[10px] text-gray-400 mt-1" id="upload-msg-${f.key}"></p>
+                    </div>` : ''}
+                </div>
+            `).join('');
+
+            saveBtn.innerText = mode === 'create' ? 'Create' : 'Save Changes';
+            saveBtn.onclick = saveEdit;
+        }
+
+        function closeEditModal() {
+            document.getElementById('edit-modal').classList.add('hidden');
+            currentEdit = null;
+        }
+
+        async function saveEdit() {
+            if (!currentEdit) return;
+            const { mode, type, id, item } = currentEdit;
+
+            // Gather values
+            const updates = {};
+            if (type === 'category' || type === 'subcategory') {
+                updates.name = document.getElementById('edit-name').value;
+                updates.image = document.getElementById('edit-image').value;
+            } else if (type === 'product') {
+                updates.name = document.getElementById('edit-name').value;
+                updates.price = document.getElementById('edit-price').value;
+                updates.image = document.getElementById('edit-image').value;
+                updates.company = document.getElementById('edit-company').value || 'Glo-Med';
+                updates.unit = document.getElementById('edit-unit').value || 'Unit';
+            }
+
+            try {
+                // Optimistic Update
+                Object.assign(item, updates);
+                updateUI();
+                closeEditModal();
+
+                // DB Update
+                let table = type === 'category' ? 'categories' : (type === 'subcategory' ? 'subcategories' : 'products');
+
+                // Map fields to DB columns
+                const dbUpdates = {};
+                if (updates.name) dbUpdates.name = updates.name;
+                if (updates.image) dbUpdates.image = updates.image;
+                if (type === 'category') {
+                    if (mode === 'create') { dbUpdates.color = 'bg-blue-500'; dbUpdates.icon_name = 'package'; }
+                }
+                if (type === 'subcategory') {
+                    if (mode === 'create') dbUpdates.category_id = id;
+                }
+                if (type === 'product') {
+                    if (updates.price) dbUpdates.price = updates.price;
+                    if (updates.company) dbUpdates.company = updates.company;
+                    if (updates.unit) dbUpdates.unit = updates.unit;
+                    if (mode === 'create') {
+                        dbUpdates.subcategory_id = id;
+                        dbUpdates.rating = 4.5;
+                        dbUpdates.reviews = 0;
+                    }
+                }
+
+                let error;
+                if (mode === 'create') {
+                    const { error: insertError } = await window.supabase.from(table).insert(dbUpdates);
+                    error = insertError;
+                } else {
+                    const { error: updateError } = await window.supabase.from(table).update(dbUpdates).eq('id', item.id);
+                    error = updateError;
+                }
+
+                if (error) {
+                    console.error('Update failed:', error);
+                } else {
+                    console.log('Update saved to', table);
+                }
+
+            } catch (e) {
+                console.error(e);
+                alert("Error saving");
+            }
+        }
+
+        async function deleteItem(type, id) {
+            if (!confirm("Are you sure you want to delete this item?")) return;
+            let table = type === 'category' ? 'categories' : (type === 'subcategory' ? 'subcategories' : 'products');
+            const { error } = await window.supabase.from(table).delete().eq('id', id);
+            if (error) { alert("Error deleting"); }
+            else { showToast("Deleted"); loadData(); }
+        }
 
         function getProductById(id) {
             for (let c of categories) {
@@ -838,6 +1127,8 @@
                 h.innerHTML = `<div class="px-4 py-3 bg-white border-b border-gray-100 flex items-center gap-3"><button onclick="navigateTo('home')" class="text-gray-700"><i data-lucide="arrow-left" class="w-6 h-6"></i></button><div><h2 class="text-xl font-bold text-gray-900">My Cart</h2><p class="text-xs text-gray-500">${cartCount} Items</p></div></div>`;
             } else if (state.page === 'profile') {
                 h.innerHTML = `<div class="px-4 py-3 bg-white border-b border-gray-100 flex items-center gap-3"><button onclick="navigateTo('home')" class="text-gray-700"><i data-lucide="arrow-left" class="w-6 h-6"></i></button><div><h2 class="text-xl font-bold text-gray-900">Account</h2><p class="text-xs text-gray-500">Manage your profile</p></div></div>`;
+            } else if (state.page === 'orders') {
+                h.innerHTML = `<div class="px-4 py-3 bg-white border-b border-gray-100"><h2 class="text-xl font-bold text-gray-900">Orders</h2><p class="text-xs text-gray-500">Manage customer orders</p></div>`;
             } else if (state.page === 'chat') {
                 h.innerHTML = `<div class="px-4 py-3 bg-white border-b border-gray-100 flex items-center justify-between"><div><h2 class="text-xl font-bold text-gray-900">Health Chat</h2><p class="text-xs text-gray-500">Admin: ${currentUser ? currentUser.name : ''}</p></div><div class="bg-pharmeasy-teal/10 p-2 rounded-full"><i data-lucide="user-cog" class="w-5 h-5 text-pharmeasy-teal"></i></div></div>`;
             } else if (state.page === 'chat-thread') {
@@ -858,14 +1149,43 @@
                 { icon: 'home', label: 'Home', active: state.page === 'home', action: "navigateTo('home')" },
                 { icon: 'layout-grid', label: 'Categories', active: state.page === 'categories', action: "navigateTo('categories')" },
                 { icon: 'shopping-cart', label: 'Cart', active: state.page === 'cart', count: cartTotal, action: "navigateTo('cart')" },
+                ...(isAdmin ? [{ icon: 'clipboard-list', label: 'Orders', active: state.page === 'orders', count: orders.filter(o => o.status === 'pending').length, action: "navigateTo('orders')" }] : []),
                 { icon: 'message-circle', label: 'Chat', active: state.page.includes('chat'), count: chatUnread, action: "navigateTo('chat')" },
                 { icon: 'play-square', label: 'New', active: state.page === 'new-products', action: "navigateTo('new-products')" }
             ];
-            document.getElementById('bottom-nav').innerHTML = n.map(i => `<div class="flex flex-col items-center gap-1 cursor-pointer" onclick="${i.action}"><div class="relative ${i.active ? 'text-pharmeasy-teal' : 'text-gray-400'}"><i data-lucide="${i.icon}" class="w-6 h-6 ${i.active && (i.icon === 'home' || i.icon === 'play-square' || i.icon === 'layout-grid') ? 'fill-current' : ''}"></i>${i.count > 0 ? `<span class="absolute -top-1 -right-1 bg-pharmeasy-orange text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full border-2 border-white font-bold">${i.count}</span>` : ''}</div><span class="text-[10px] font-medium ${i.active ? 'text-pharmeasy-teal' : 'text-gray-500'}">${i.label}</span></div>`).join('');
+            document.getElementById('bottom-nav').innerHTML = n.map(i => `<div class="flex flex-col items-center gap-1 cursor-pointer" onclick="${i.action}"><div class="relative ${i.active ? 'text-pharmeasy-teal' : (i.icon === 'message-circle' ? 'text-green-600' : 'text-gray-400')}"><i data-lucide="${i.icon}" class="w-6 h-6 ${i.active && (i.icon === 'home' || i.icon === 'play-square' || i.icon === 'layout-grid') ? 'fill-current' : ''}"></i>${i.count > 0 ? `<span class="absolute -top-1 -right-1 bg-pharmeasy-orange text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full border-2 border-white font-bold">${i.count}</span>` : ''}</div><span class="text-[10px] font-medium ${i.active ? 'text-pharmeasy-teal' : 'text-gray-500'}">${i.label}</span></div>`).join('');
+        }
+
+        function showToast(message) {
+            let container = document.getElementById('toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toast-container';
+                container.className = 'fixed top-4 left-1/2 -translate-x-1/2 z-[70] flex flex-col gap-2 w-full max-w-sm px-4';
+                document.body.appendChild(container);
+            }
+
+            const toast = document.createElement('div');
+            toast.className = 'bg-gray-900 text-white px-4 py-3 rounded-lg shadow-lg flex items-center justify-between animate-in fade-in slide-in-from-top-4 duration-300';
+            toast.innerHTML = `
+                <div class="flex items-center gap-2">
+                    <i data-lucide="bell" class="w-4 h-4 text-pharmeasy-teal"></i>
+                    <span class="text-sm font-medium">${message}</span>
+                </div>
+                <button onclick="this.parentElement.remove()" class="text-gray-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
+            `;
+            container.appendChild(toast);
+            lucide.createIcons();
+
+            setTimeout(() => {
+                toast.classList.add('animate-out', 'fade-out', 'slide-out-to-top-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
         }
 
         function renderHome() {
-            document.getElementById('main-content').innerHTML = `<div class="p-4 space-y-5"><div class="hero-carousel">${heroSlides.map((slide, i) => `<div class="hero-slide ${i === 0 ? 'active' : ''}"><div class="absolute inset-0"><img src="${slide.image}" class="w-full h-full object-cover rounded-2xl"></div><div class="gradient-overlay rounded-2xl"></div><div class="relative z-10 h-full flex flex-col justify-end p-6 bg-gradient-to-t from-black/80 via-black/30 to-transparent rounded-2xl"><div><h2 class="text-2xl font-bold text-white mb-1">${slide.title}</h2><p class="text-white/90 text-sm mb-1">${slide.subtitle}</p></div></div></div>`).join('')}<div class="carousel-indicators">${heroSlides.map((_, i) => `<div class="indicator ${i === 0 ? 'active' : ''}" onclick="goToSlide(${i})"></div>`).join('')}</div></div><div id="categories-section"><div class="flex items-center justify-between mb-3"><h2 class="section-title">Shop by Category</h2></div><div class="grid grid-cols-2 gap-3">${categories.map((c, i) => `<div onclick="openCategory(${i})" class="category-card pharmeasy-card overflow-hidden cursor-pointer active:scale-95"><div class="relative h-32 overflow-hidden"><img src="${c.image}" alt="${c.name}" class="category-image"><div class="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent"></div><div class="absolute bottom-0 left-0 right-0 p-3"><div class="flex items-center gap-2 mb-1"><div class="${c.color} w-7 h-7 rounded-lg flex items-center justify-center"><i data-lucide="${c.iconName}" class="w-4 h-4 text-white"></i></div><p class="category-title text-white">${c.name}</p></div></div></div></div>`).join('')}</div></div><div><div class="flex items-center justify-between mb-3"><div class="flex items-center gap-2"><div class="bg-pharmeasy-orange p-2 rounded-lg"><i data-lucide="trending-up" class="w-4 h-4 text-white"></i></div><h2 class="section-title">Flash Deals</h2></div><button class="text-pharmeasy-teal text-sm font-semibold">See All</button></div><div class="grid grid-cols-2 gap-3">${categories[0].subcategories[0].products.slice(0, 4).map(p => `<div class="product-card"><div class="p-3"><div class="relative rounded-lg overflow-hidden h-40 mb-2"><img src="${p.image}" alt="${p.name}" class="w-full h-full object-cover"><div class="absolute top-2 left-2 discount-badge">${p.discount}</div></div><h3 class="product-name mb-1 line-clamp-2 h-9">${p.name}</h3><div class="flex items-center gap-1 mb-2"><i data-lucide="star" class="w-3 h-3 fill-yellow-400 text-yellow-400"></i><span class="text-xs font-medium text-gray-700">${p.rating}</span><span class="text-xs text-gray-400">(${p.reviews})</span></div><div class="mb-3"><div class="price-current">${p.price}</div><div class="price-original">${p.originalPrice}</div></div><button onclick="addToCart('${p.id}')" class="w-full pharmeasy-btn text-xs">Add to Cart</button></div></div>`).join('')}</div></div></div>`;
+            const isAdmin = currentUser && currentUser.role === 'admin';
+            document.getElementById('main-content').innerHTML = `<div class="p-4 space-y-5"><div class="hero-carousel">${heroSlides.map((slide, i) => `<div class="hero-slide ${i === 0 ? 'active' : ''}"><div class="absolute inset-0"><img src="${slide.image}" class="w-full h-full object-cover rounded-2xl"></div><div class="gradient-overlay rounded-2xl"></div><div class="relative z-10 h-full flex flex-col justify-end p-6 bg-gradient-to-t from-black/80 via-black/30 to-transparent rounded-2xl"><div><h2 class="text-2xl font-bold text-white mb-1">${slide.title}</h2><p class="text-white/90 text-sm mb-1">${slide.subtitle}</p></div></div></div>`).join('')}<div class="carousel-indicators">${heroSlides.map((_, i) => `<div class="indicator ${i === 0 ? 'active' : ''}" onclick="goToSlide(${i})"></div>`).join('')}</div></div><div id="categories-section"><div class="flex items-center justify-between mb-3"><h2 class="section-title">Shop by Category</h2>${isAdmin ? `<button onclick="openEditModal('create', 'category')" class="text-xs bg-pharmeasy-teal text-white px-3 py-1.5 rounded-full font-bold shadow-sm flex items-center gap-1"><i data-lucide="plus" class="w-3 h-3"></i> Add</button>` : ''}</div><div class="grid grid-cols-2 gap-3">${categories.map((c, i) => `<div class="relative"><div onclick="openCategory(${i})" class="category-card pharmeasy-card overflow-hidden cursor-pointer active:scale-95"><div class="relative h-32 overflow-hidden"><img src="${c.image}" alt="${c.name}" class="category-image"><div class="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent"></div><div class="absolute bottom-0 left-0 right-0 p-3"><div class="flex items-center gap-2 mb-1"><div class="${c.color} w-7 h-7 rounded-lg flex items-center justify-center"><i data-lucide="${c.iconName}" class="w-4 h-4 text-white"></i></div><p class="category-title text-white">${c.name}</p></div></div></div></div>${isAdmin ? `<div class="absolute top-2 right-2 flex gap-2 z-10"><button onclick="openEditModal('edit', 'category', '${c.id || i}')" class="p-1.5 bg-white/90 rounded-full shadow-sm hover:bg-white text-blue-600"><i data-lucide="edit-2" class="w-3 h-3"></i></button><button onclick="deleteItem('category', '${c.id}')" class="p-1.5 bg-white/90 rounded-full shadow-sm hover:bg-white text-red-600"><i data-lucide="trash-2" class="w-3 h-3"></i></button></div>` : ''}</div>`).join('')}</div></div><div><div class="flex items-center justify-between mb-3"><div class="flex items-center gap-2"><div class="bg-pharmeasy-orange p-2 rounded-lg"><i data-lucide="trending-up" class="w-4 h-4 text-white"></i></div><h2 class="section-title">Flash Deals</h2></div><button class="text-pharmeasy-teal text-sm font-semibold">See All</button></div><div class="grid grid-cols-2 gap-3">${categories[0]?.subcategories[0]?.products.slice(0, 4).map(p => `<div class="product-card relative"><div class="p-3"><div class="relative rounded-lg overflow-hidden h-40 mb-2"><img src="${p.image}" alt="${p.name}" class="w-full h-full object-cover"><div class="absolute top-2 left-2 discount-badge">${p.discount}</div></div><h3 class="product-name mb-1 line-clamp-2 h-9">${p.name}</h3><div class="flex items-center gap-1 mb-2"><i data-lucide="star" class="w-3 h-3 fill-yellow-400 text-yellow-400"></i><span class="text-xs font-medium text-gray-700">${p.rating}</span><span class="text-xs text-gray-400">(${p.reviews})</span></div><div class="mb-3"><div class="price-current">${p.price}</div><div class="price-original">${p.originalPrice}</div></div><button onclick="addToCart('${p.id}')" class="w-full pharmeasy-btn text-xs">Add to Cart</button></div>${isAdmin ? `<button onclick="openEditModal('product', '${p.id}')" class="absolute top-2 right-2 p-1.5 bg-white/90 rounded-full shadow-sm z-10"><i data-lucide="edit-2" class="w-3 h-3 text-gray-700"></i></button>` : ''}</div>`).join('')}</div></div></div>`;
 
             // Start carousel after rendering
             setTimeout(() => {
@@ -898,13 +1218,86 @@
 
         function renderSubcategories() {
             if (!state.selectedCategory) return;
-            document.getElementById('main-content').innerHTML = `<div class="p-4"><div class="space-y-3">${state.selectedCategory.subcategories.map((s, i) => `<div onclick="openSubcategory(${i})" class="pharmeasy-card overflow-hidden cursor-pointer active:scale-95"><div class="relative h-40 overflow-hidden"><img src="${s.image}" alt="${s.name}" class="category-image"><div class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div><div class="absolute bottom-0 left-0 right-0 p-4"><div class="flex items-center justify-between"><div><p class="text-lg font-bold text-white mb-1">${s.name}</p></div><div class="bg-white/20 backdrop-blur-sm p-2 rounded-lg"><i data-lucide="chevron-right" class="w-5 h-5 text-white"></i></div></div></div></div></div>`).join('')}</div></div>`;
+            const isAdmin = currentUser && currentUser.role === 'admin';
+            document.getElementById('main-content').innerHTML = `
+            <div class="p-4">
+                ${isAdmin ? `
+                <div onclick="openEditModal('create', 'subcategory', '${state.selectedCategory.id}')" class="mb-4 bg-white border-2 border-dashed border-gray-300 rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer hover:border-pharmeasy-teal hover:bg-teal-50 transition-colors">
+                    <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mb-2">
+                        <i data-lucide="plus" class="w-6 h-6 text-gray-500"></i>
+                    </div>
+                    <span class="text-sm font-bold text-gray-600">Add New Collection</span>
+                </div>` : ''}
+                
+                <div class="space-y-3">
+                    ${state.selectedCategory.subcategories.map((s, i) => `
+                    <div class="relative group">
+                        <div onclick="openSubcategory(${i})" class="pharmeasy-card overflow-hidden cursor-pointer active:scale-95">
+                            <div class="relative h-40 overflow-hidden">
+                                <img src="${s.image}" alt="${s.name}" class="category-image">
+                                <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
+                                <div class="absolute bottom-0 left-0 right-0 p-4">
+                                    <div class="flex items-center justify-between">
+                                        <div><p class="text-lg font-bold text-white mb-1">${s.name}</p></div>
+                                        <div class="bg-white/20 backdrop-blur-sm p-2 rounded-lg"><i data-lucide="chevron-right" class="w-5 h-5 text-white"></i></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        ${isAdmin ? `
+                        <div class="absolute top-2 right-2 flex gap-2 z-10">
+                            <button onclick="openEditModal('edit', 'subcategory', '${s.id || s.name}')" class="p-1.5 bg-white/90 rounded-full shadow-sm hover:bg-white text-blue-600"><i data-lucide="edit-2" class="w-3 h-3"></i></button>
+                            <button onclick="deleteItem('subcategory', '${s.id}')" class="p-1.5 bg-white/90 rounded-full shadow-sm hover:bg-white text-red-600"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+                        </div>` : ''}
+                    </div>`).join('')}
+                </div>
+            </div>`;
         }
+
 
         function renderProducts() {
             if (!state.selectedSubcategory) return;
-            document.getElementById('main-content').innerHTML = `<div class="p-4"><div class="grid grid-cols-2 gap-3">${state.selectedSubcategory.products.map(p => `<div class="product-card"><div class="p-3"><div class="relative rounded-lg overflow-hidden h-40 mb-2"><img src="${p.image}" alt="${p.name}" class="w-full h-full object-cover"></div><h3 class="product-name mb-1 line-clamp-2 h-9">${p.name}</h3><p class="company-name mb-2">${p.company}</p><div class="flex items-center gap-1 mb-2"><i data-lucide="star" class="w-3 h-3 fill-yellow-400 text-yellow-400"></i><span class="text-xs font-medium text-gray-700">${p.rating}</span><span class="text-xs text-gray-400">(${p.reviews})</span></div><div class="mb-2"><div class="price-current">${p.price}</div></div><p class="text-xs text-gray-500 mb-3 font-medium">${p.unit}</p><button onclick="addToCart('${p.id}')" class="w-full pharmeasy-btn text-xs">Add to Cart</button></div></div>`).join('')}</div></div>`;
+            const isAdmin = currentUser && currentUser.role === 'admin';
+            document.getElementById('main-content').innerHTML = `
+            <div class="p-4">
+                ${isAdmin ? `
+                <div onclick="openEditModal('create', 'product', '${state.selectedSubcategory.id}')" class="mb-4 bg-white border-2 border-dashed border-gray-300 rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer hover:border-pharmeasy-teal hover:bg-teal-50 transition-colors">
+                    <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mb-2">
+                        <i data-lucide="plus" class="w-6 h-6 text-gray-500"></i>
+                    </div>
+                    <span class="text-sm font-bold text-gray-600">Add New Product</span>
+                </div>` : ''}
+
+                <div class="grid grid-cols-2 gap-3">
+                    ${state.selectedSubcategory.products.map(p => `
+                    <div class="product-card relative group">
+                        <div class="p-3">
+                            <div class="relative rounded-lg overflow-hidden h-40 mb-2">
+                                <img src="${p.image}" alt="${p.name}" class="w-full h-full object-cover">
+                            </div>
+                            <h3 class="product-name mb-1 line-clamp-2 h-9">${p.name}</h3>
+                            <p class="company-name mb-2">${p.company}</p>
+                            <div class="flex items-center gap-1 mb-2">
+                                <i data-lucide="star" class="w-3 h-3 fill-yellow-400 text-yellow-400"></i>
+                                <span class="text-xs font-medium text-gray-700">${p.rating}</span>
+                                <span class="text-xs text-gray-400">(${p.reviews})</span>
+                            </div>
+                            <div class="mb-2">
+                                <div class="price-current">${p.price}</div>
+                            </div>
+                            <p class="text-xs text-gray-500 mb-3 font-medium">${p.unit}</p>
+                            <button onclick="addToCart('${p.id}')" class="w-full pharmeasy-btn text-xs">Add to Cart</button>
+                        </div>
+                        ${isAdmin ? `
+                        <div class="absolute top-2 right-2 flex gap-2 z-10">
+                            <button onclick="openEditModal('edit', 'product', '${p.id}')" class="p-1.5 bg-white/90 rounded-full shadow-sm hover:bg-white text-blue-600"><i data-lucide="edit-2" class="w-3 h-3"></i></button>
+                            <button onclick="deleteItem('product', '${p.id}')" class="p-1.5 bg-white/90 rounded-full shadow-sm hover:bg-white text-red-600"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+                        </div>` : ''}
+                    </div>`).join('')}
+                </div>
+            </div>`;
         }
+
 
         function renderCart() {
             const h = document.getElementById('main-content');
@@ -937,6 +1330,57 @@
              <div class="fixed bottom-[70px] left-0 right-0 bg-white border-t border-gray-100 p-4 max-w-md mx-auto">
                 <button onclick="createOrder()" class="w-full pharmeasy-btn py-3 text-base shadow-lg shadow-teal-700/20">Order Now</button>
              </div>
+            </div>`;
+        }
+
+        async function updateOrderStatus(id, status) {
+            if (!confirm(`Mark order as ${status}?`)) return;
+            try {
+                const { error } = await window.supabase.from('orders').update({ status }).eq('id', id);
+                if (error) throw error;
+                showToast(`Order marked as ${status}`);
+                loadData(); // Reload orders
+            } catch (e) {
+                console.error(e);
+                alert("Error updating order");
+            }
+        }
+
+        function renderOrders() {
+            if (!currentUser || currentUser.role !== 'admin') return navigateTo('home');
+
+            document.getElementById('main-content').innerHTML = `
+            <div class="p-4 space-y-4">
+                ${orders.length === 0 ? '<div class="text-center py-10 text-gray-500">No orders yet</div>' :
+                    orders.map(o => `
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <span class="text-xs font-bold px-2 py-1 rounded-full ${o.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : (o.status === 'shipped' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700')} uppercase tracking-wide">${o.status || 'Pending'}</span>
+                            <p class="text-xs text-gray-500 mt-1">${new Date(o.created_at).toLocaleString()}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="font-bold text-gray-900">${o.user_email}</p>
+                            <p class="text-xs text-gray-500">ID: #${o.id}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-2 mb-4">
+                        ${(o.items || []).map(i => `
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">${i.quantity}x ${i.product.name}</span>
+                            <span class="font-medium">${i.product.price}</span>
+                        </div>`).join('')}
+                    </div>
+                    
+                    ${o.status !== 'delivered' ? `
+                    <div class="flex gap-2 border-t pt-3">
+                        ${o.status === 'pending' ? `
+                        <button onclick="updateOrderStatus(${o.id}, 'shipped')" class="flex-1 bg-blue-50 text-blue-600 py-2 rounded-lg text-sm font-bold hover:bg-blue-100 transition-colors">Mark Shipped</button>` : ''}
+                        ${o.status === 'shipped' || o.status === 'pending' ? `
+                        <button onclick="updateOrderStatus(${o.id}, 'delivered')" class="flex-1 bg-green-50 text-green-600 py-2 rounded-lg text-sm font-bold hover:bg-green-100 transition-colors">Mark Delivered</button>` : ''}
+                    </div>` : ''}
+                </div>`).join('')}
             </div>`;
         }
 
@@ -1496,6 +1940,7 @@
         window.addEventListener('load', () => {
             window.supabase.auth.getSession().then(({ data: { session } }) => {
                 handleAuthChange(session);
+                loadData(); // Fetch data on load
             });
 
             window.supabase.auth.onAuthStateChange((_event, session) => {
@@ -1539,8 +1984,85 @@
         }
 
         // Seed Database Function (Stubbbed for Supabase)
+        // Seed Database Function (Supabase)
         async function seedDatabase() {
-            alert("Database seeding is not yet implemented for Supabase. Please use the Supabase Dashboard SQL Editor to import data.");
+            if (!confirm('This will upload current hardcoded categories and products to Supabase. Make sure you have created the tables first. Continue?')) return;
+            console.log('Starting seed process...');
+            alert("Starting Seed Process... Check Console for progress.");
+
+            try {
+                for (const cat of categories) {
+                    // Create Category
+                    const { data: catData, error: catError } = await window.supabase
+                        .from('categories')
+                        .insert({
+                            name: cat.name,
+                            image: cat.image,
+                            color: cat.color,
+                            icon_name: cat.iconName
+                        })
+                        .select()
+                        .single();
+
+                    if (catError) {
+                        console.error(`Error creating category ${cat.name}:`, catError);
+                        continue;
+                    }
+                    console.log(`Created category: ${cat.name}`);
+
+                    for (const sub of cat.subcategories) {
+                        // Create Subcategory
+                        const { data: subData, error: subError } = await window.supabase
+                            .from('subcategories')
+                            .insert({
+                                name: sub.name,
+                                image: sub.image,
+                                category_id: catData.id
+                            })
+                            .select()
+                            .single();
+
+                        if (subError) {
+                            console.error(`  Error creating subcategory ${sub.name}:`, subError);
+                            continue;
+                        }
+
+                        // Create Products
+                        const productsPayload = sub.products.map(prod => ({
+                            name: prod.name,
+                            company: prod.company,
+                            price: prod.price,
+                            original_price: prod.originalPrice,
+                            unit: prod.unit,
+                            rating: prod.rating,
+                            reviews: prod.reviews,
+                            image: prod.image,
+                            subcategory_id: subData.id,
+                            category_id: catData.id
+                        }));
+
+                        const { error: prodError } = await window.supabase
+                            .from('products')
+                            .insert(productsPayload);
+
+                        if (prodError) console.error(`    Error inserting products for ${sub.name}:`, prodError);
+                        else console.log(`    Inserted ${productsPayload.length} products for ${sub.name}`);
+                    }
+                }
+                alert('Seeding completed! You can now browse your data in Supabase.');
+            } catch (err) {
+                console.error('Seed Error:', err);
+                alert('Error during seeding: ' + err.message);
+            }
+        }
+
+        // PWA Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('SW Registered', reg))
+                    .catch(err => console.log('SW Registration Failed', err));
+            });
         }
     </script>
 </body>
