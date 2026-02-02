@@ -1,4 +1,4 @@
-const CACHE_NAME = 'glomed-v1';
+const CACHE_NAME = 'glomed-v4';
 const ASSETS = [
     './index.html'
 ];

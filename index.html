@@ -823,13 +823,13 @@
 
             try {
                 const fileName = `uploads/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9]/g, '_')}`;
-                // Assuming 'images' bucket exists. If not, this throws error.
-                const { data, error } = await window.supabase.storage.from('images').upload(fileName, file);
+                // Assuming 'products' bucket exists. If not, this throws error.
+                const { data, error } = await window.supabase.storage.from('products').upload(fileName, file);
 
                 if (error) throw error;
 
                 // Get Public URL
-                const { data: urlData } = window.supabase.storage.from('images').getPublicUrl(fileName);
+                const { data: urlData } = window.supabase.storage.from('products').getPublicUrl(fileName);
                 const publicUrl = urlData.publicUrl;
 
                 document.getElementById(targetId).value = publicUrl;
@@ -1287,7 +1287,91 @@
 
         function renderHome() {
             const isAdmin = currentUser && currentUser.role === 'admin';
-            document.getElementById('main-content').innerHTML = `<div class="p-4 space-y-5"><div class="hero-carousel">${heroSlides.map((slide, i) => `<div class="hero-slide ${i === 0 ? 'active' : ''}"><div class="absolute inset-0"><img src="${slide.image}" class="w-full h-full object-cover rounded-2xl"></div><div class="gradient-overlay rounded-2xl"></div><div class="relative z-10 h-full flex flex-col justify-end p-6 bg-gradient-to-t from-black/80 via-black/30 to-transparent rounded-2xl"><div><h2 class="text-2xl font-bold text-white mb-1">${slide.title}</h2><p class="text-white/90 text-sm mb-1">${slide.subtitle}</p></div></div></div>`).join('')}<div class="carousel-indicators">${heroSlides.map((_, i) => `<div class="indicator ${i === 0 ? 'active' : ''}" onclick="goToSlide(${i})"></div>`).join('')}</div></div><div id="categories-section"><div class="flex items-center justify-between mb-3"><h2 class="section-title">Shop by Category</h2>${isAdmin ? `<button onclick="openEditModal('create', 'category')" class="text-xs bg-pharmeasy-teal text-white px-3 py-1.5 rounded-full font-bold shadow-sm flex items-center gap-1"><i data-lucide="plus" class="w-3 h-3"></i> Add</button>` : ''}</div><div class="grid grid-cols-2 gap-3">${categories.map((c, i) => `<div class="relative"><div onclick="openCategory(${i})" class="category-card pharmeasy-card overflow-hidden cursor-pointer active:scale-95"><div class="relative h-32 overflow-hidden"><img src="${c.image}" alt="${c.name}" class="category-image"><div class="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent"></div><div class="absolute bottom-0 left-0 right-0 p-3"><div class="flex items-center gap-2 mb-1"><div class="${c.color} w-7 h-7 rounded-lg flex items-center justify-center"><i data-lucide="${c.iconName}" class="w-4 h-4 text-white"></i></div><p class="category-title text-white">${c.name}</p></div></div></div></div>${isAdmin ? `<div class="absolute top-2 right-2 flex gap-2 z-10"><button onclick="openEditModal('edit', 'category', '${c.id || i}')" class="p-1.5 bg-white/90 rounded-full shadow-sm hover:bg-white text-blue-600"><i data-lucide="edit-2" class="w-3 h-3"></i></button><button onclick="deleteItem('category', '${c.id}')" class="p-1.5 bg-white/90 rounded-full shadow-sm hover:bg-white text-red-600"><i data-lucide="trash-2" class="w-3 h-3"></i></button></div>` : ''}</div>`).join('')}</div></div><div><div class="flex items-center justify-between mb-3"><div class="flex items-center gap-2"><div class="bg-pharmeasy-orange p-2 rounded-lg"><i data-lucide="trending-up" class="w-4 h-4 text-white"></i></div><h2 class="section-title">Flash Deals</h2></div><button class="text-pharmeasy-teal text-sm font-semibold">See All</button></div><div class="grid grid-cols-2 gap-3">${categories[0]?.subcategories[0]?.products.slice(0, 4).map(p => `<div class="product-card relative"><div class="p-3"><div class="relative rounded-lg overflow-hidden h-40 mb-2"><img src="${p.image}" alt="${p.name}" class="w-full h-full object-cover"><div class="absolute top-2 left-2 discount-badge">${p.discount}</div></div><h3 class="product-name mb-1 line-clamp-2 h-9">${p.name}</h3><div class="flex items-center gap-1 mb-2"><i data-lucide="star" class="w-3 h-3 fill-yellow-400 text-yellow-400"></i><span class="text-xs font-medium text-gray-700">${p.rating}</span><span class="text-xs text-gray-400">(${p.reviews})</span></div><div class="mb-3"><div class="price-current">${p.price}</div><div class="price-original">${p.originalPrice}</div></div><button onclick="addToCart('${p.id}')" class="w-full pharmeasy-btn text-xs">Add to Cart</button></div>${isAdmin ? `<button onclick="openEditModal('product', '${p.id}')" class="absolute top-2 right-2 p-1.5 bg-white/90 rounded-full shadow-sm z-10"><i data-lucide="edit-2" class="w-3 h-3 text-gray-700"></i></button>` : ''}</div>`).join('')}</div></div></div>`;
+            const safeCategories = categories || [];
+            const safeHeroSlides = heroSlides || [];
+
+            // Safety check for flash deals product
+            const flashDealProducts = safeCategories[0]?.subcategories?.[0]?.products || [];
+
+            document.getElementById('main-content').innerHTML = `
+            <div class="p-4 space-y-5">
+                <div class="hero-carousel">
+                    ${safeHeroSlides.map((slide, i) => `
+                    <div class="hero-slide ${i === 0 ? 'active' : ''}">
+                        <div class="absolute inset-0">
+                            <img src="${slide.image}" class="w-full h-full object-cover rounded-2xl">
+                        </div>
+                        <div class="gradient-overlay rounded-2xl"></div>
+                        <div class="relative z-10 h-full flex flex-col justify-end p-6 bg-gradient-to-t from-black/80 via-black/30 to-transparent rounded-2xl">
+                            <div>
+                                <h2 class="text-2xl font-bold text-white mb-1">${slide.title}</h2>
+                                <p class="text-white/90 text-sm mb-1">${slide.subtitle}</p>
+                            </div>
+                        </div>
+                    </div>`).join('')}
+                    <div class="carousel-indicators">
+                        ${safeHeroSlides.map((_, i) => `<div class="indicator ${i === 0 ? 'active' : ''}" onclick="goToSlide(${i})"></div>`).join('')}
+                    </div>
+                </div>
+
+                <div id="categories-section">
+                    <div class="flex items-center justify-between mb-3">
+                        <h2 class="section-title">Shop by Category</h2>
+                        ${isAdmin ? `<button onclick="openEditModal('create', 'category')" class="text-xs bg-pharmeasy-teal text-white px-3 py-1.5 rounded-full font-bold shadow-sm flex items-center gap-1"><i data-lucide="plus" class="w-3 h-3"></i> Add</button>` : ''}
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        ${safeCategories.map((c, i) => `
+                        <div class="relative">
+                            <div onclick="openCategory(${i})" class="category-card pharmeasy-card overflow-hidden cursor-pointer active:scale-95">
+                                <div class="relative h-32 overflow-hidden">
+                                    <img src="${c.image}" alt="${c.name}" class="category-image">
+                                    <div class="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent"></div>
+                                    <div class="absolute bottom-0 left-0 right-0 p-3">
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <div class="${c.color || 'bg-gray-500'} w-7 h-7 rounded-lg flex items-center justify-center">
+                                                <i data-lucide="${c.iconName || 'package'}" class="w-4 h-4 text-white"></i>
+                                            </div>
+                                            <p class="category-title text-white">${c.name}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            ${isAdmin ? `
+                            <div class="absolute top-2 right-2 flex gap-2 z-10">
+                                <button onclick="openEditModal('edit', 'category', '${c.id || i}')" class="p-1.5 bg-white/90 rounded-full shadow-sm hover:bg-white text-blue-600"><i data-lucide="edit-2" class="w-3 h-3"></i></button>
+                                <button onclick="deleteItem('category', '${c.id}')" class="p-1.5 bg-white/90 rounded-full shadow-sm hover:bg-white text-red-600"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+                            </div>` : ''}
+                        </div>`).join('')}
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                            <div class="bg-pharmeasy-orange p-2 rounded-lg">
+                                <i data-lucide="trending-up" class="w-4 h-4 text-white"></i>
+                            </div>
+                            <h2 class="section-title">Flash Deals</h2>
+                        </div>
+                        <button class="text-pharmeasy-teal text-sm font-semibold">See All</button>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        ${flashDealProducts.slice(0, 4).map(p => `
+                        <div class="bg-white rounded-lg overflow-hidden pb-2 group" onclick="addToCart('${p.id}')">
+                            <div class="relative aspect-[4/5] bg-gray-100">
+                                <img src="${p.image}" alt="${p.name}" class="w-full h-full object-cover">
+                                <div class="absolute top-2 right-2 bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-sm">SALE</div>
+                            </div>
+                            <div class="mt-2 px-1">
+                                <h3 class="text-sm text-gray-700 line-clamp-1 mb-0.5">${p.name}</h3>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-base font-bold text-gray-900">${p.price}</span>
+                                </div>
+                            </div>
+                        </div>`).join('')}
+                    </div>
+                </div>
+            </div>`;
 
             // Start carousel after rendering
             setTimeout(() => {
@@ -1298,9 +1382,9 @@
         function renderSearchResults() {
             const query = state.searchQuery;
             let results = [];
-            categories.forEach(cat => {
-                cat.subcategories.forEach(sub => {
-                    sub.products.forEach(p => {
+            (categories || []).forEach(cat => {
+                (cat.subcategories || []).forEach(sub => {
+                    (sub.products || []).forEach(p => {
                         if (p.name.toLowerCase().includes(query) || sub.name.toLowerCase().includes(query)) {
                             results.push(p);
                         }
@@ -1309,8 +1393,8 @@
             });
 
             document.getElementById('main-content').innerHTML = `
-            <div class="p-4">
-                <h3 class="font-bold text-gray-900 mb-4">Search Results for "${query}"</h3>
+                <div class="p-4">
+                    <h3 class="font-bold text-gray-900 mb-4">Search Results for "${query}"</h3>
                 ${results.length === 0 ? '<p class="text-gray-500">No products found.</p>' :
                     `<div class="grid grid-cols-2 gap-3">
                     ${results.map(p => `<div class="product-card"><div class="p-3"><div class="relative rounded-lg overflow-hidden h-40 mb-2"><img src="${p.image}" alt="${p.name}" class="w-full h-full object-cover"></div><h3 class="product-name mb-1 line-clamp-2 h-9">${p.name}</h3><div class="mb-3"><div class="price-current">${p.price}</div></div><button onclick="addToCart('${p.id}')" class="w-full pharmeasy-btn text-xs">Add to Cart</button></div></div>`).join('')}
@@ -1321,18 +1405,22 @@
         function renderSubcategories() {
             if (!state.selectedCategory) return;
             const isAdmin = currentUser && currentUser.role === 'admin';
+            const subcategories = state.selectedCategory.subcategories || [];
+
             document.getElementById('main-content').innerHTML = `
-            <div class="p-4">
-                ${isAdmin ? `
+                <div class="p-4">
+                    ${isAdmin ? `
                 <div onclick="openEditModal('create', 'subcategory', '${state.selectedCategory.id}')" class="mb-4 bg-white border-2 border-dashed border-gray-300 rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer hover:border-pharmeasy-teal hover:bg-teal-50 transition-colors">
                     <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mb-2">
                         <i data-lucide="plus" class="w-6 h-6 text-gray-500"></i>
                     </div>
                     <span class="text-sm font-bold text-gray-600">Add New Collection</span>
-                </div>` : ''}
-                
-                <div class="space-y-3">
-                    ${state.selectedCategory.subcategories.map((s, i) => `
+                </div>` : ''
+                }
+
+            <div class="space-y-3">
+                ${subcategories.length === 0 ? '<p class="text-center text-gray-500 py-10">No collections yet.</p>' :
+                    subcategories.map((s, i) => `
                     <div class="relative group">
                         <div onclick="openSubcategory(${i})" class="pharmeasy-card overflow-hidden cursor-pointer active:scale-95">
                             <div class="relative h-40 overflow-hidden">
@@ -1352,7 +1440,7 @@
                             <button onclick="deleteItem('subcategory', '${s.id}')" class="p-1.5 bg-white/90 rounded-full shadow-sm hover:bg-white text-red-600"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
                         </div>` : ''}
                     </div>`).join('')}
-                </div>
+            </div>
             </div>`;
         }
 
@@ -1361,42 +1449,40 @@
             if (!state.selectedSubcategory) return;
             const isAdmin = currentUser && currentUser.role === 'admin';
             document.getElementById('main-content').innerHTML = `
-            <div class="p-4">
-                ${isAdmin ? `
+                <div class="p-3">
+                    ${isAdmin ? `
                 <div onclick="openEditModal('create', 'product', '${state.selectedSubcategory.id}')" class="mb-4 bg-white border-2 border-dashed border-gray-300 rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer hover:border-pharmeasy-teal hover:bg-teal-50 transition-colors">
                     <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mb-2">
                         <i data-lucide="plus" class="w-6 h-6 text-gray-500"></i>
                     </div>
                     <span class="text-sm font-bold text-gray-600">Add New Product</span>
-                </div>` : ''}
+                </div>` : ''
+                }
 
-                <div class="grid grid-cols-2 gap-3">
-                    ${state.selectedSubcategory.products.map(p => `
-                    <div class="product-card relative group">
-                        <div class="p-3">
-                            <div class="relative rounded-lg overflow-hidden h-40 mb-2">
-                                <img src="${p.image}" alt="${p.name}" class="w-full h-full object-cover">
-                            </div>
-                            <h3 class="product-name mb-1 line-clamp-2 h-9">${p.name}</h3>
-                            <p class="company-name mb-2">${p.company}</p>
-                            <div class="flex items-center gap-1 mb-2">
-                                <i data-lucide="star" class="w-3 h-3 fill-yellow-400 text-yellow-400"></i>
-                                <span class="text-xs font-medium text-gray-700">${p.rating}</span>
-                                <span class="text-xs text-gray-400">(${p.reviews})</span>
-                            </div>
-                            <div class="mb-2">
-                                <div class="price-current">${p.price}</div>
-                            </div>
-                            <p class="text-xs text-gray-500 mb-3 font-medium">${p.unit}</p>
-                            <button onclick="addToCart('${p.id}')" class="w-full pharmeasy-btn text-xs">Add to Cart</button>
+            <div class="grid grid-cols-2 gap-3">
+                ${state.selectedSubcategory.products.map(p => `
+                    <div class="bg-white rounded-lg overflow-hidden pb-2 group" onclick="addToCart('${p.id}')">
+                        <div class="relative aspect-[4/5] bg-gray-100">
+                            <img src="${p.image}" alt="${p.name}" class="w-full h-full object-cover">
+                            
+                            <!-- Sale Badge -->
+                            ${p.discount || p.original_price ? `<div class="absolute top-2 right-2 bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-sm">SALE</div>` : ''}
+
+                            ${isAdmin ? `
+                            <div class="absolute top-2 left-2 flex flex-col gap-2 z-10" onclick="event.stopPropagation()">
+                                <button onclick="openEditModal('edit', 'product', '${p.id}')" class="p-1.5 bg-white/90 rounded-full shadow-sm hover:bg-white text-blue-600"><i data-lucide="edit-2" class="w-3 h-3"></i></button>
+                                <button onclick="deleteItem('product', '${p.id}')" class="p-1.5 bg-white/90 rounded-full shadow-sm hover:bg-white text-red-600"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+                            </div>` : ''}
                         </div>
-                        ${isAdmin ? `
-                        <div class="absolute top-2 right-2 flex gap-2 z-10">
-                            <button onclick="openEditModal('edit', 'product', '${p.id}')" class="p-1.5 bg-white/90 rounded-full shadow-sm hover:bg-white text-blue-600"><i data-lucide="edit-2" class="w-3 h-3"></i></button>
-                            <button onclick="deleteItem('product', '${p.id}')" class="p-1.5 bg-white/90 rounded-full shadow-sm hover:bg-white text-red-600"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
-                        </div>` : ''}
+                        
+                        <div class="mt-2 px-1">
+                            <h3 class="text-sm text-gray-700 line-clamp-1 mb-0.5">${p.name}</h3>
+                            <div class="flex items-center gap-2">
+                                <span class="text-base font-bold text-gray-900">${p.price}</span>
+                            </div>
+                        </div>
                     </div>`).join('')}
-                </div>
+            </div>
             </div>`;
         }
 
@@ -1432,7 +1518,7 @@
              <div class="fixed bottom-[70px] left-0 right-0 bg-white border-t border-gray-100 p-4 max-w-md mx-auto">
                 <button onclick="createOrder()" class="w-full pharmeasy-btn py-3 text-base shadow-lg shadow-teal-700/20">Order Now</button>
              </div>
-            </div>`;
+            </div> `;
         }
 
         async function updateOrderStatus(id, status) {
@@ -1440,7 +1526,7 @@
             try {
                 const { error } = await window.supabase.from('orders').update({ status }).eq('id', id);
                 if (error) throw error;
-                showToast(`Order marked as ${status}`);
+                showToast(`Order marked as ${status} `);
                 loadData(); // Reload orders
             } catch (e) {
                 console.error(e);
@@ -1452,8 +1538,8 @@
             if (!currentUser || currentUser.role !== 'admin') return navigateTo('home');
 
             document.getElementById('main-content').innerHTML = `
-            <div class="p-4 space-y-4">
-                ${orders.length === 0 ? '<div class="text-center py-10 text-gray-500">No orders yet</div>' :
+                <div class="p-4 space-y-4" >
+                    ${orders.length === 0 ? '<div class="text-center py-10 text-gray-500">No orders yet</div>' :
                     orders.map(o => `
                 <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
                     <div class="flex justify-between items-start mb-3">
@@ -1482,7 +1568,8 @@
                         ${o.status === 'shipped' || o.status === 'pending' ? `
                         <button onclick="updateOrderStatus(${o.id}, 'delivered')" class="flex-1 bg-green-50 text-green-600 py-2 rounded-lg text-sm font-bold hover:bg-green-100 transition-colors">Mark Delivered</button>` : ''}
                     </div>` : ''}
-                </div>`).join('')}
+                </div>`).join('')
+                }
             </div>`;
         }
 
@@ -1491,7 +1578,7 @@
             if (!currentUser) {
                 // Fallback for guests - show a simple "Start Chat as Guest"
                 document.getElementById('main-content').innerHTML = `
-                 <div class="flex flex-col items-center justify-center h-full p-6 text-center">
+                <div class="flex flex-col items-center justify-center h-full p-6 text-center">
                      <div class="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mb-4">
                          <i data-lucide="message-circle" class="w-10 h-10 text-green-500"></i>
                      </div>
@@ -1505,7 +1592,7 @@
             const isUserAdmin = currentUser.role === 'admin';
 
             document.getElementById('main-content').innerHTML = `
-             <div class="bg-white min-h-screen">
+                <div class="bg-white min-h-screen">
                 <div class="bg-white p-4 border-b border-gray-100 flex items-center justify-between sticky top-0 z-10">
                     <h2 class="text-xl font-bold text-green-600">Chats</h2>
                     ${!isUserAdmin ? `
@@ -1590,7 +1677,7 @@
             if (messagesUnsubscribe) { messagesUnsubscribe.unsubscribe(); messagesUnsubscribe = null; }
             fetchMessages(chatId);
             const channel = window.supabase.channel('public:messages:' + chatId);
-            channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `chat_id=eq.${chatId}` }, () => fetchMessages(chatId)).subscribe();
+            channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `chat_id = eq.${chatId} ` }, () => fetchMessages(chatId)).subscribe();
             messagesUnsubscribe = channel;
 
             // Reset unread
@@ -1599,9 +1686,9 @@
 
             // Render Container with WhatsApp BG
             document.getElementById('main-content').innerHTML = `
-             <div class="flex flex-col h-full relative bg-[#e5ddd5]" style="background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');">
+                <div class="flex flex-col h-full relative bg-[#e5ddd5]" style = "background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');" >
                  
-                 <!-- Chat Header -->
+                 <!--Chat Header-->
                  <div class="bg-white p-3 flex items-center gap-3 sticky top-0 shadow-sm z-20">
                     <button onclick="navigateTo('${isUserAdmin ? 'chat' : 'home'}')" class="text-green-600"><i data-lucide="arrow-left" class="w-6 h-6"></i></button>
                     <div class="w-10 h-10 rounded-full bg-gray-200 overflow-hidden">
@@ -1626,7 +1713,7 @@
                          <button onclick="sendMessage()" class="p-2 text-green-600"><i data-lucide="send" class="w-6 h-6"></i></button>
                      </div>
                  </div>
-             </div>`;
+             </div> `;
         }
 
         async function fetchMessages(chatId) {
@@ -1644,7 +1731,7 @@
             if (!container) return;
 
             if (currentMessages.length === 0) {
-                container.innerHTML = `<div class="bg-[#dcf8c6] rounded-lg p-2 text-xs text-center mx-auto shadow-sm max-w-[200px] mt-4">Messages are end-to-end encrypted. No one outside of this chat, not even WhatsApp, can read or listen to them.</div>`;
+                container.innerHTML = `<div class="bg-[#dcf8c6] rounded-lg p-2 text-xs text-center mx-auto shadow-sm max-w-[200px] mt-4" > Messages are end - to - end encrypted.No one outside of this chat, not even WhatsApp, can read or listen to them.</div> `;
                 return;
             }
 
@@ -1652,16 +1739,16 @@
                 const isMe = m.senderId === currentUser.uid;
                 const time = m.timestamp ? new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
                 return `
-                      <div class="flex ${isMe ? 'justify-end' : 'justify-start'}">
-                          <div class="${isMe ? 'chat-bubble-mine' : 'chat-bubble-theirs'} px-3 py-1.5 max-w-[80%] shadow-sm text-sm relative group">
-                              <p class="mr-12 mb-1 text-gray-900">${m.text}</p>
-                              <span class="text-[10px] text-gray-500 absolute bottom-1 right-2 flex items-center gap-0.5">
-                                ${time} 
-                                ${isMe ? '<i data-lucide="check-check" class="w-3 h-3 text-blue-500"></i>' : ''}
-                              </span>
-                          </div>
+                <div class="flex ${isMe ? 'justify-end' : 'justify-start'}" >
+                    <div class="${isMe ? 'chat-bubble-mine' : 'chat-bubble-theirs'} px-3 py-1.5 max-w-[80%] shadow-sm text-sm relative group">
+                        <p class="mr-12 mb-1 text-gray-900">${m.text}</p>
+                        <span class="text-[10px] text-gray-500 absolute bottom-1 right-2 flex items-center gap-0.5">
+                            ${time}
+                            ${isMe ? '<i data-lucide="check-check" class="w-3 h-3 text-blue-500"></i>' : ''}
+                        </span>
+                    </div>
                       </div>
-                  `;
+                `;
             }).join('');
             container.scrollTop = container.scrollHeight;
             lucide.createIcons();
@@ -1711,7 +1798,7 @@
             const isAdmin = currentUser && currentUser.role === 'admin';
 
             document.getElementById('main-content').innerHTML = `
-            <div class="bg-white">
+                <div class="bg-white" >
                  <div class="p-4 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white z-10">
                     <h2 class="text-xl font-bold text-gray-900">News & Updates</h2>
                      ${isAdmin ? `<button onclick="openEditModal('create', 'news')" class="text-xs bg-pharmeasy-teal text-white px-3 py-1.5 rounded-full font-bold shadow-sm flex items-center gap-1"><i data-lucide="plus" class="w-3 h-3"></i> Add Post</button>` : ''}
@@ -1759,7 +1846,7 @@
                 </div>
                 `).join('')}
                 </div>
-            </div>`;
+            </div> `;
         }
 
         function toggleLike(btn) {
@@ -1784,49 +1871,95 @@
 
 
 
-        function renderCategories(selectedIndex = 0) {
-            // Shein-style Split View
-            // Left Sidebar: standard list
-            // Right Content: Grid of subcategories
-
-            const selectedCat = categories[selectedIndex];
+        function renderCategories() {
+            // Grid View similar to Home
+            const isAdmin = currentUser && currentUser.role === 'admin';
+            const safeCategories = categories || [];
 
             document.getElementById('main-content').innerHTML = `
-            <div class="flex h-full bg-white">
-                <!-- Left Sidebar -->
-                <div class="w-24 flex-shrink-0 bg-gray-50 overflow-y-auto hide-scrollbar border-r border-gray-100">
-                    ${categories.map((c, i) => `
-                    <div onclick="renderCategories(${i})" class="py-4 px-2 text-center text-xs cursor-pointer ${i === selectedIndex ? 'bg-white font-bold text-black border-l-4 border-black' : 'text-gray-500 hover:bg-gray-100'}">
-                        <span>${c.name}</span>
-                    </div>
-                    `).join('')}
+                <div class="p-4" >
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-bold text-gray-900">All Categories</h2>
+                    ${isAdmin ? `<button onclick="openEditModal('create', 'category')" class="text-xs bg-pharmeasy-teal text-white px-3 py-1.5 rounded-full font-bold shadow-sm flex items-center gap-1"><i data-lucide="plus" class="w-3 h-3"></i> Add</button>` : ''}
                 </div>
-
-                <!-- Right Content -->
-                <div class="flex-1 overflow-y-auto hide-scrollbar p-3">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="font-bold text-sm text-gray-900">${selectedCat.name}</h2>
-                        <span class="text-xs text-gray-400 underline cursor-pointer">View All</span>
-                    </div>
-                    
-                    <div class="grid grid-cols-2 gap-3">
-                        ${selectedCat.subcategories.map(sub => {
-                // Handle both object (with image) and string styles if mixed, though normally we normalized them
-                const name = sub.name || sub;
-                const img = sub.image || selectedCat.image;
-
-                return `
-                            <div onclick="openSubcategory('${name}')" class="flex flex-col items-center gap-2 cursor-pointer group">
-                                <div class="w-full aspect-square bg-gray-50 rounded-lg overflow-hidden relative">
-                                    <img src="${img}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                <div class="grid grid-cols-2 gap-3 pb-20">
+                    ${safeCategories.map((c, i) => `
+                    <div class="relative">
+                        <div onclick="openCategory(${i})" class="category-card pharmeasy-card overflow-hidden cursor-pointer active:scale-95">
+                            <div class="relative h-32 overflow-hidden">
+                                <img src="${c.image}" alt="${c.name}" class="category-image">
+                                <div class="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent"></div>
+                                <div class="absolute bottom-0 left-0 right-0 p-3">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <div class="${c.color || 'bg-gray-500'} w-7 h-7 rounded-lg flex items-center justify-center">
+                                            <i data-lucide="${c.iconName || 'package'}" class="w-4 h-4 text-white"></i>
+                                        </div>
+                                        <p class="category-title text-white">${c.name}</p>
+                                    </div>
                                 </div>
-                                <span class="text-[11px] text-center text-gray-700 leading-tight line-clamp-2">${name}</span>
                             </div>
-                            `;
-            }).join('')}
-                    </div>
+                        </div>
+                        ${isAdmin ? `
+                        <div class="absolute top-2 right-2 flex gap-2 z-10">
+                            <button onclick="openEditModal('edit', 'category', '${c.id || i}')" class="p-1.5 bg-white/90 rounded-full shadow-sm hover:bg-white text-blue-600"><i data-lucide="edit-2" class="w-3 h-3"></i></button>
+                            <button onclick="deleteItem('category', '${c.id}')" class="p-1.5 bg-white/90 rounded-full shadow-sm hover:bg-white text-red-600"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+                        </div>` : ''}
+                    </div>`).join('')}
                 </div>
-            </div>`;
+            </div> `;
+        }
+
+        function renderHeader() {
+            const header = document.getElementById('header');
+            if (!header) return;
+
+            const showSearch = state.page === 'home' || state.page === 'search-results';
+            const isRootPage = ['home', 'categories', 'news', 'cart', 'profile'].includes(state.page);
+
+            header.innerHTML = `
+                <div class="flex items-center gap-3 px-4 py-3" >
+                    ${!isRootPage ? `<button onclick="goBack()" class="p-1 -ml-2 text-gray-800"><i data-lucide="chevron-left" class="w-6 h-6"></i></button>` : `<div class="font-bold text-xl tracking-tight text-pharmeasy-teal">Glo-Med</div>`}
+               
+               ${showSearch ? `
+                <div class="flex-1 relative">
+                     <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+                     <input type="text" 
+                            value="${state.searchQuery}"
+                            oninput="handleSearch(this.value)"
+                            placeholder="Search..." 
+                            class="w-full bg-gray-50 border-none rounded-full py-2.5 pl-9 pr-4 text-sm focus:ring-1 focus:ring-pharmeasy-teal transition-all placeholder:text-gray-400">
+                </div>
+               ` : '<div class="flex-1"></div>'
+                }
+
+            <div class="flex items-center gap-2">
+                ${currentUser && currentUser.role === 'admin' ? `
+                       <button onclick="navigateTo('orders')" class="p-2 text-gray-600 hover:bg-gray-100 rounded-full relative">
+                           <i data-lucide="clipboard-list" class="w-6 h-6"></i>
+                           ${orders.length > 0 ? `<div class="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></div>` : ''}
+                       </button>
+                   ` : ''}
+                <button onclick="navigateTo('profile')" class="w-9 h-9 rounded-full overflow-hidden border border-gray-200 flex items-center justify-center">
+                    ${currentUser && currentUser.photoURL ? `<img src="${currentUser.photoURL}" class="w-full h-full object-cover">` : `<i data-lucide="user" class="w-5 h-5 text-gray-500"></i>`}
+                </button>
+            </div>
+            </div> `;
+        }
+
+        function goBack() {
+            if (state.page === 'products') {
+                state.page = 'categories'; // Changed from 'subcategories' to 'categories'
+                state.selectedSubcategory = null;
+                state.selectedCategory = null; // Clear selected category too
+            } else if (state.page === 'search-results') {
+                state.page = 'home';
+                state.searchQuery = '';
+            } else if (['chat-thread', 'orders', 'news-post'].includes(state.page)) {
+                state.page = 'home';
+            } else {
+                state.page = 'home';
+            }
+            updateUI();
         }
 
         // Helper to handle clicks on the sub items (previously logic existed for this)
@@ -1843,14 +1976,14 @@
             if (currentUser) {
                 // Logged In View
                 h.innerHTML = `
-                <div class="p-6">
+                <div class="p-6" >
                     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col items-center mb-6">
-                         <div class="w-24 h-24 rounded-full bg-pharmeasy-teal/10 flex items-center justify-center text-pharmeasy-teal text-3xl font-bold mb-4 overflow-hidden">
+                        <div class="w-24 h-24 rounded-full bg-pharmeasy-teal/10 flex items-center justify-center text-pharmeasy-teal text-3xl font-bold mb-4 overflow-hidden">
                             ${currentUser.photoURL ? `<img src="${currentUser.photoURL}" class="w-full h-full object-cover">` : currentUser.name.charAt(0)}
-                         </div>
-                         <h2 class="text-xl font-bold text-gray-900">${currentUser.name}</h2>
-                         <p class="text-sm text-gray-500 mb-2">${currentUser.email}</p>
-                         ${currentUser.role === 'admin' ? '<span class="px-3 py-1 bg-pharmeasy-orange/10 text-pharmeasy-orange text-xs font-bold rounded-full border border-pharmeasy-orange/20">ADMIN</span>' : '<span class="px-3 py-1 bg-gray-100 text-gray-500 text-xs font-medium rounded-full">User</span>'}
+                        </div>
+                        <h2 class="text-xl font-bold text-gray-900">${currentUser.name}</h2>
+                        <p class="text-sm text-gray-500 mb-2">${currentUser.email}</p>
+                        ${currentUser.role === 'admin' ? '<span class="px-3 py-1 bg-pharmeasy-orange/10 text-pharmeasy-orange text-xs font-bold rounded-full border border-pharmeasy-orange/20">ADMIN</span>' : '<span class="px-3 py-1 bg-gray-100 text-gray-500 text-xs font-medium rounded-full">User</span>'}
                     </div>
 
                     ${currentUser.role === 'admin' ? `
@@ -1861,71 +1994,72 @@
                              <span class="text-sm font-medium text-gray-700">Seed Database</span>
                         </button>
                     </div>
-                    ` : ''}
+                    ` : ''
+                    }
 
-                    <button onclick="logout()" class="w-full pharmeasy-btn bg-red-500 hover:bg-red-600 text-white">Log Out</button>
-                </div>`;
+            <button onclick="logout()" class="w-full pharmeasy-btn bg-red-500 hover:bg-red-600 text-white">Log Out</button>
+                </div> `;
             } else {
                 // Login/Register View
                 h.innerHTML = `
-                <div class="p-6">
-                     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                         <h2 class="text-2xl font-bold text-gray-900 mb-6 text-center">Welcome to Glo-Med</h2>
-                         
-                         <div class="flex gap-4 mb-6 border-b border-gray-100">
-                             <button onclick="document.getElementById('login-form').classList.remove('hidden'); document.getElementById('register-form').classList.add('hidden'); this.classList.add('text-pharmeasy-teal', 'border-b-2', 'border-pharmeasy-teal'); this.nextElementSibling.classList.remove('text-pharmeasy-teal', 'border-b-2', 'border-pharmeasy-teal');" class="flex-1 pb-3 font-semibold text-pharmeasy-teal border-b-2 border-pharmeasy-teal transition-all">Login</button>
-                             <button onclick="document.getElementById('login-form').classList.add('hidden'); document.getElementById('register-form').classList.remove('hidden'); this.classList.add('text-pharmeasy-teal', 'border-b-2', 'border-pharmeasy-teal'); this.previousElementSibling.classList.remove('text-pharmeasy-teal', 'border-b-2', 'border-pharmeasy-teal');" class="flex-1 pb-3 font-semibold text-gray-400 transition-all">Register</button>
-                         </div>
+                <div class="p-6" >
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                        <h2 class="text-2xl font-bold text-gray-900 mb-6 text-center">Welcome to Glo-Med</h2>
 
-                         <!-- Login Form -->
-                         <div id="login-form" class="space-y-4">
-                             <div>
-                                 <label class="block text-xs font-bold text-gray-700 mb-1">Email</label>
-                                 <input type="email" id="login-email" class="w-full pharmeasy-search px-4 py-3 text-sm" placeholder="Enter your email">
-                             </div>
-                             <div>
-                                 <label class="block text-xs font-bold text-gray-700 mb-1">Password</label>
-                                 <input type="password" id="login-password" class="w-full pharmeasy-search px-4 py-3 text-sm" placeholder="Enter password">
-                             </div>
-                             <button onclick="login()" class="w-full pharmeasy-btn py-3 mt-2">Sign In</button>
-                             <div class="relative py-2">
-                                 <div class="absolute inset-0 flex items-center"><span class="w-full border-t border-gray-100"></span></div>
-                                 <div class="relative flex justify-center text-xs uppercase"><span class="bg-white px-2 text-gray-500">Or continue with</span></div>
-                             </div>
-                             <button onclick="googleLogin()" class="w-full bg-white border border-gray-200 text-gray-700 font-semibold py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-gray-50 transition-all">
-                                 <svg class="w-5 h-5" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.84z" fill="#FBBC05"/><path d="M12 4.66c1.61 0 3.06.56 4.21 1.64l3.15-3.15C17.45 1.19 14.97 0 12 0 7.7 0 3.99 2.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-                                 Google
-                             </button>
+                        <div class="flex gap-4 mb-6 border-b border-gray-100">
+                            <button onclick="document.getElementById('login-form').classList.remove('hidden'); document.getElementById('register-form').classList.add('hidden'); this.classList.add('text-pharmeasy-teal', 'border-b-2', 'border-pharmeasy-teal'); this.nextElementSibling.classList.remove('text-pharmeasy-teal', 'border-b-2', 'border-pharmeasy-teal');" class="flex-1 pb-3 font-semibold text-pharmeasy-teal border-b-2 border-pharmeasy-teal transition-all">Login</button>
+                            <button onclick="document.getElementById('login-form').classList.add('hidden'); document.getElementById('register-form').classList.remove('hidden'); this.classList.add('text-pharmeasy-teal', 'border-b-2', 'border-pharmeasy-teal'); this.previousElementSibling.classList.remove('text-pharmeasy-teal', 'border-b-2', 'border-pharmeasy-teal');" class="flex-1 pb-3 font-semibold text-gray-400 transition-all">Register</button>
+                        </div>
 
-                             <!-- Temporary Debug Button -->
-                             <div class="mt-8 pt-6 border-t border-gray-100">
+                        <!-- Login Form -->
+                        <div id="login-form" class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 mb-1">Email</label>
+                                <input type="email" id="login-email" class="w-full pharmeasy-search px-4 py-3 text-sm" placeholder="Enter your email">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 mb-1">Password</label>
+                                <input type="password" id="login-password" class="w-full pharmeasy-search px-4 py-3 text-sm" placeholder="Enter password">
+                            </div>
+                            <button onclick="login()" class="w-full pharmeasy-btn py-3 mt-2">Sign In</button>
+                            <div class="relative py-2">
+                                <div class="absolute inset-0 flex items-center"><span class="w-full border-t border-gray-100"></span></div>
+                                <div class="relative flex justify-center text-xs uppercase"><span class="bg-white px-2 text-gray-500">Or continue with</span></div>
+                            </div>
+                            <button onclick="googleLogin()" class="w-full bg-white border border-gray-200 text-gray-700 font-semibold py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-gray-50 transition-all">
+                                <svg class="w-5 h-5" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" /><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" /><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.84z" fill="#FBBC05" /><path d="M12 4.66c1.61 0 3.06.56 4.21 1.64l3.15-3.15C17.45 1.19 14.97 0 12 0 7.7 0 3.99 2.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" /></svg>
+                                Google
+                            </button>
+
+                            <!-- Temporary Debug Button -->
+                            <div class="mt-8 pt-6 border-t border-gray-100">
                                 <h3 class="text-center text-sm font-bold text-gray-400 uppercase mb-4">Developer Tools</h3>
                                 <button onclick="seedDatabase()" class="w-full bg-gray-800 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-gray-900 transition-all">
                                     <i data-lucide="database" class="w-5 h-5"></i>
                                     Seed Database Now
                                 </button>
                                 <p class="text-xs text-center text-gray-500 mt-2">Click this to upload data to Firebase without logging in.</p>
-                             </div>
-                         </div>
+                            </div>
+                        </div>
 
-                         <!-- Register Form -->
-                         <div id="register-form" class="space-y-4 hidden">
-                             <div>
-                                 <label class="block text-xs font-bold text-gray-700 mb-1">Full Name</label>
-                                 <input type="text" id="reg-name" class="w-full pharmeasy-search px-4 py-3 text-sm" placeholder="Your name">
-                             </div>
-                             <div>
-                                 <label class="block text-xs font-bold text-gray-700 mb-1">Email</label>
-                                 <input type="email" id="reg-email" class="w-full pharmeasy-search px-4 py-3 text-sm" placeholder="Enter your email">
-                             </div>
-                             <div>
-                                 <label class="block text-xs font-bold text-gray-700 mb-1">Password</label>
-                                 <input type="password" id="reg-password" class="w-full pharmeasy-search px-4 py-3 text-sm" placeholder="Create password (min 6 chars)">
-                             </div>
-                             <button onclick="register()" class="w-full pharmeasy-btn py-3 mt-2">Create Account</button>
-                         </div>
-                     </div>
-                </div>`;
+                        <!-- Register Form -->
+                        <div id="register-form" class="space-y-4 hidden">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 mb-1">Full Name</label>
+                                <input type="text" id="reg-name" class="w-full pharmeasy-search px-4 py-3 text-sm" placeholder="Your name">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 mb-1">Email</label>
+                                <input type="email" id="reg-email" class="w-full pharmeasy-search px-4 py-3 text-sm" placeholder="Enter your email">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 mb-1">Password</label>
+                                <input type="password" id="reg-password" class="w-full pharmeasy-search px-4 py-3 text-sm" placeholder="Create password (min 6 chars)">
+                            </div>
+                            <button onclick="register()" class="w-full pharmeasy-btn py-3 mt-2">Create Account</button>
+                        </div>
+                    </div>
+                </div> `;
             }
         }
 
@@ -2073,7 +2207,7 @@
                 const colorClass = t.id === 'chat' ? 'text-green-500' : (isActive ? 'text-black' : 'text-gray-400');
 
                 return `
-                <div onclick="setPage('${t.id}')" class="nav-item ${isActive ? 'active' : ''} flex-1 flex flex-col items-center justify-center cursor-pointer relative">
+                <div onclick = "setPage('${t.id}')" class="nav-item ${isActive ? 'active' : ''} flex-1 flex flex-col items-center justify-center cursor-pointer relative" >
                     <div class="relative">
                         <i data-lucide="${t.icon}" class="w-6 h-6 ${colorClass}"></i>
                         ${t.badge > 0 ? `<div class="cart-badge absolute -top-1 -right-2 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center">${t.badge}</div>` : ''}
@@ -2121,10 +2255,10 @@
                         .single();
 
                     if (catError) {
-                        console.error(`Error creating category ${cat.name}:`, catError);
+                        console.error(`Error creating category ${cat.name}: `, catError);
                         continue;
                     }
-                    console.log(`Created category: ${cat.name}`);
+                    console.log(`Created category: ${cat.name} `);
 
                     for (const sub of cat.subcategories) {
                         // Create Subcategory
@@ -2139,7 +2273,7 @@
                             .single();
 
                         if (subError) {
-                            console.error(`  Error creating subcategory ${sub.name}:`, subError);
+                            console.error(`  Error creating subcategory ${sub.name}: `, subError);
                             continue;
                         }
 
@@ -2161,7 +2295,7 @@
                             .from('products')
                             .insert(productsPayload);
 
-                        if (prodError) console.error(`    Error inserting products for ${sub.name}:`, prodError);
+                        if (prodError) console.error(`    Error inserting products for ${sub.name}: `, prodError);
                         else console.log(`    Inserted ${productsPayload.length} products for ${sub.name}`);
                     }
                 }
