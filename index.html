@@ -521,6 +521,11 @@
 
         let categories = [
             {
+                iconName: 'pill', name: 'Drugs', color: 'bg-blue-500',
+                image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400&h=400&fit=crop',
+                subcategories: drugSubcategories
+            },
+            {
                 iconName: 'package', name: 'Consumables', color: 'bg-orange-500',
                 image: 'https://iororwxhmiiqlq5p.leadongcdn.com/cloud/pnBplKplRllSqirjnqlrj/weixintupian_20250526144752.png',
                 subcategories: createSubcategories(consumableList, 'https://images.unsplash.com/photo-1584473457409-ae5c91d7a8cc?w=400&h=400&fit=crop')
@@ -534,11 +539,6 @@
                 iconName: 'armchair', name: 'Medical Furniture', color: 'bg-purple-500',
                 image: 'https://images.unsplash.com/photo-1631815588090-d4bfec5b1ccb?w=400&h=400&fit=crop',
                 subcategories: createSubcategories(furnitureList, 'https://images.unsplash.com/photo-1631815588090-d4bfec5b1ccb?w=400&h=400&fit=crop')
-            },
-            {
-                iconName: 'pill', name: 'Drugs', color: 'bg-blue-500',
-                image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400&h=400&fit=crop',
-                subcategories: drugSubcategories
             }
         ];
 
@@ -678,9 +678,11 @@
             let query = db.collection('chats');
 
             if (isUserAdmin) {
-                query = query.orderBy('last_message_time', 'desc');
+                // query = query.orderBy('last_message_time', 'desc'); 
+                // Removed server-side sort to avoid index errors for now
             } else {
-                query = query.where('user_id', '==', currentUser.uid).orderBy('last_message_time', 'desc');
+                query = query.where('user_id', '==', currentUser.uid);
+                // .orderBy('last_message_time', 'desc');
             }
 
             chatsUnsubscribe = query.onSnapshot(snapshot => {
@@ -696,6 +698,9 @@
                         time: d.last_message_time ? new Date(d.last_message_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''
                     };
                 });
+
+                // Sort client-side
+                chats = newChats.sort((a, b) => (b.lastMessageTime || 0) - (a.lastMessageTime || 0));
 
                 // Toast Logic
                 snapshot.docChanges().forEach(change => {
@@ -1680,29 +1685,37 @@
 
         async function startNewChat() {
             // Logic to start chat 
-            // ... existing logic but simplified for brevity in this replace block ...
-            // We can assume user is set now
             if (!currentUser) return;
-            // Check existing
-            const { data: existingChats } = await window.supabase.from('chats')
-                .select('id').eq('user_id', currentUser.uid).limit(1);
 
-            if (existingChats && existingChats.length > 0) {
-                navigateTo('chat-thread', { chatId: existingChats[0].id });
-                return;
+            try {
+                // Check existing
+                const existingChatsSnap = await db.collection('chats')
+                    .where('user_id', '==', currentUser.uid)
+                    .limit(1)
+                    .get();
+
+                if (!existingChatsSnap.empty) {
+                    navigateTo('chat-thread', { chatId: existingChatsSnap.docs[0].id });
+                    return;
+                }
+
+                // Create new
+                const docRef = await db.collection('chats').add({
+                    user_id: currentUser.uid,
+                    user_name: currentUser.name,
+                    admin_ids: adminEmails,
+                    last_message: 'Chat started',
+                    last_message_time: new Date().toISOString(),
+                    unread_admin: 1,
+                    unread_client: 0,
+                    created_at: new Date().toISOString()
+                });
+
+                navigateTo('chat-thread', { chatId: docRef.id });
+            } catch (error) {
+                console.error("Start Chat Error", error);
+                alert("Failed to start chat");
             }
-
-            // Create new
-            const { data: newChat, error } = await window.supabase.from('chats').insert({
-                user_id: currentUser.uid,
-                user_name: currentUser.name,
-                admin_ids: adminEmails,
-                last_message: 'Chat started',
-                last_message_time: new Date().toISOString(),
-                unread_admin: 1, unread_client: 0
-            }).select().single();
-
-            if (!error) navigateTo('chat-thread', { chatId: newChat.id });
         }
 
 
@@ -1715,24 +1728,6 @@
 
             // Subscribe logic reused...
             if (messagesUnsubscribe) { messagesUnsubscribe(); messagesUnsubscribe = null; }
-
-            // Firestore Realtime Listener
-            messagesUnsubscribe = db.collection('messages')
-                .where('chat_id', '==', chatId)
-                .orderBy('timestamp', 'asc')
-                .onSnapshot(snapshot => {
-                    currentMessages = snapshot.docs.map(doc => ({
-                        id: doc.id,
-                        ...doc.data(),
-                        timestamp: doc.data().timestamp ? new Date(doc.data().timestamp) : null,
-                        senderId: doc.data().sender_id
-                    }));
-                    updateChatThreadUI();
-                });
-
-            // Reset unread
-            const updateObj = isUserAdmin ? { unread_admin: 0 } : { unread_client: 0 };
-            db.collection('chats').doc(chatId).update(updateObj).catch(console.error);
 
             // Render Container with WhatsApp BG
             document.getElementById('main-content').innerHTML = `
@@ -1764,6 +1759,24 @@
                      </div>
                  </div>
              </div> `;
+
+            // Firestore Realtime Listener
+            messagesUnsubscribe = db.collection('messages')
+                .where('chat_id', '==', chatId)
+                .orderBy('timestamp', 'asc')
+                .onSnapshot(snapshot => {
+                    currentMessages = snapshot.docs.map(doc => ({
+                        id: doc.id,
+                        ...doc.data(),
+                        timestamp: doc.data().timestamp ? new Date(doc.data().timestamp) : null,
+                        senderId: doc.data().sender_id
+                    }));
+                    updateChatThreadUI();
+                });
+
+            // Reset unread
+            const updateObj = isUserAdmin ? { unread_admin: 0 } : { unread_client: 0 };
+            db.collection('chats').doc(chatId).update(updateObj).catch(console.error);
         }
 
         async function fetchMessages(chatId) {
@@ -2013,12 +2026,16 @@
         }
 
         // Helper to handle clicks on the sub items (previously logic existed for this)
-        function openSubcategory(subName) {
-            console.log("Opening", subName);
-            // Navigate to products or subcat view
-            state.selectedSubcategory = subName;
-            state.page = 'products'; // Or whatever logic was handling product lists
-            updateUI();
+        // Helper to handle clicks on the sub items
+        function openSubcategory(i) {
+            console.log("Opening Subcategory Index", i);
+            if (state.selectedCategory && state.selectedCategory.subcategories) {
+                state.selectedSubcategory = state.selectedCategory.subcategories[i];
+                state.page = 'products';
+                updateUI();
+            } else {
+                console.error("No selected category or subcategories found");
+            }
         }
 
         function renderProfile() {
