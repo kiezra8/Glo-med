@@ -1,6 +1,12 @@
-const CACHE_NAME = 'glomed-v4';
+const CACHE_NAME = 'glomed-v5';
 const ASSETS = [
-    './index.html'
+    './index.html',
+    'https://cdn.tailwindcss.com',
+    'https://unpkg.com/lucide@latest',
+    'https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js',
+    'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js',
+    'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js',
+    'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js'
 ];
 
 self.addEventListener('install', (e) => {

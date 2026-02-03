@@ -8,17 +8,31 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
 
-    <!-- Supabase SDK -->
-    <script type="module">
-        import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+    <!-- Firebase SDK (Compat for simple script usage) -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
 
-        // Initialize Supabase
-        const supabaseUrl = 'https://nmavrucyndvpypwddsxe.supabase.co';
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tYXZydWN5bmR2cHlwd2Rkc3hlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc4MDk1MTEsImV4cCI6MjA4MzM4NTUxMX0.5F8cleqV4oWDt0GOQA-FWTBxlEVF06cTmhc4rvap82c';
-        const supabase = createClient(supabaseUrl, supabaseKey);
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAdiAf0Ni1wsm00PMiT1-agSmgPxEkvswo",
+            authDomain: "glo-med.firebaseapp.com",
+            projectId: "glo-med",
+            storageBucket: "glo-med.firebasestorage.app",
+            messagingSenderId: "259320794812",
+            appId: "1:259320794812:web:179fbcd9710d6b1e9b4ab9",
+            measurementId: "G-XQXF0ZBRBV"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+        const storage = firebase.storage();
 
-        // Expose to window
-        window.supabase = supabase;
+        // Helper to mimic Supabase-like syntax for easier refactoring
+        window.db = db;
+        window.auth = auth;
+        window.storage = storage;
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -751,27 +765,33 @@
 
 
         async function loadData() {
-            // Show loading state if needed
             try {
-                const { data: cats, error: catError } = await window.supabase.from('categories').select('*').order('id');
-                if (catError) throw catError;
+                // Fetch Categories
+                const catSnap = await db.collection('categories').orderBy('id').get();
+                const cats = catSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-                if (!cats || cats.length === 0) {
+                if (cats.length === 0) {
                     console.log("No categories in DB, using hardcoded");
-                    // populateProducts is already called by default? No, I commented it out.
-                    populateProducts();
+                    populateProducts(); // This populates local state. We should also seed DB if needed.
+                    // Automatically seed if empty to ensure data exists
+                    seedDatabase();
                     updateUI();
                     return;
                 }
 
-                const { data: subs, error: subError } = await window.supabase.from('subcategories').select('*');
-                const { data: prods, error: prodError } = await window.supabase.from('products').select('*');
-                const { data: ords, error: ordError } = await window.supabase.from('orders').select('*').order('created_at', { ascending: false });
+                // Fetch Subcategories
+                const subSnap = await db.collection('subcategories').get();
+                const subs = subSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-                if (subError) throw subError;
-                if (prodError) throw prodError;
+                // Fetch Products
+                const prodSnap = await db.collection('products').get();
+                const prods = prodSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-                if (isAdmin && !ordError) {
+                // Fetch Orders (if admin)
+                let ords = [];
+                if (isAdmin) {
+                    const ordSnap = await db.collection('orders').orderBy('created_at', 'desc').get();
+                    ords = ordSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                     orders = ords;
                 }
 
@@ -795,17 +815,17 @@
                             unit: p.unit,
                             rating: p.rating,
                             reviews: p.reviews,
-                            image: p.image
+                            image: p.image,
+                            discount: p.discount
                         }))
                     }))
                 }));
 
-                console.log("Loaded data from Supabase:", categories.length);
+                console.log("Loaded data from Firestore:", categories.length);
                 updateUI();
 
             } catch (e) {
                 console.error("Load Data Error", e);
-                // Fallback
                 populateProducts();
                 updateUI();
             }
@@ -823,14 +843,13 @@
 
             try {
                 const fileName = `uploads/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9]/g, '_')}`;
-                // Assuming 'products' bucket exists. If not, this throws error.
-                const { data, error } = await window.supabase.storage.from('products').upload(fileName, file);
+                const ref = storage.ref(fileName);
 
-                if (error) throw error;
+                // Upload
+                await ref.put(file);
 
-                // Get Public URL
-                const { data: urlData } = window.supabase.storage.from('products').getPublicUrl(fileName);
-                const publicUrl = urlData.publicUrl;
+                // Get URL
+                const publicUrl = await ref.getDownloadURL();
 
                 document.getElementById(targetId).value = publicUrl;
                 if (msgEl) {
@@ -841,7 +860,7 @@
             } catch (e) {
                 console.error("Upload failed", e);
                 if (msgEl) {
-                    msgEl.innerText = "Upload Failed. Ensure 'images' bucket exists.";
+                    msgEl.innerText = "Upload Failed. Ensure Storage rules allow write.";
                     msgEl.className = "text-[10px] text-red-600 mt-1";
                 }
                 alert("Upload failed: " + e.message);
@@ -1674,15 +1693,25 @@
             const isUserAdmin = currentUser ? currentUser.role === 'admin' : false;
 
             // Subscribe logic reused...
-            if (messagesUnsubscribe) { messagesUnsubscribe.unsubscribe(); messagesUnsubscribe = null; }
-            fetchMessages(chatId);
-            const channel = window.supabase.channel('public:messages:' + chatId);
-            channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `chat_id = eq.${chatId} ` }, () => fetchMessages(chatId)).subscribe();
-            messagesUnsubscribe = channel;
+            if (messagesUnsubscribe) { messagesUnsubscribe(); messagesUnsubscribe = null; }
+
+            // Firestore Realtime Listener
+            messagesUnsubscribe = db.collection('messages')
+                .where('chat_id', '==', chatId)
+                .orderBy('timestamp', 'asc')
+                .onSnapshot(snapshot => {
+                    currentMessages = snapshot.docs.map(doc => ({
+                        id: doc.id,
+                        ...doc.data(),
+                        timestamp: doc.data().timestamp ? new Date(doc.data().timestamp) : null,
+                        senderId: doc.data().sender_id
+                    }));
+                    updateChatThreadUI();
+                });
 
             // Reset unread
             const updateObj = isUserAdmin ? { unread_admin: 0 } : { unread_client: 0 };
-            window.supabase.from('chats').update(updateObj).eq('id', chatId).then(() => { });
+            db.collection('chats').doc(chatId).update(updateObj).catch(console.error);
 
             // Render Container with WhatsApp BG
             document.getElementById('main-content').innerHTML = `
@@ -1706,7 +1735,7 @@
                     </div>
                  </div>
                  
-                 <div class="fixed bottom-0 left-0 right-0 p-2 bg-transparent max-w-md mx-auto">
+                 <div class="fixed bottom-0 left-0 right-0 p-2 bg-transparent max-w-md mx-auto z-50">
                      <div class="bg-white rounded-full flex items-center px-2 py-1 shadow-lg gap-2">
                          <button class="p-2 text-gray-400"><i data-lucide="plus" class="w-6 h-6"></i></button>
                          <input type="text" id="message-input" onkeypress="if(event.key === 'Enter') sendMessage()" placeholder="Message" class="flex-1 border-none focus:ring-0 text-base bg-transparent p-2">
@@ -1717,13 +1746,7 @@
         }
 
         async function fetchMessages(chatId) {
-            const { data, error } = await window.supabase.from('messages').select('*').eq('chat_id', chatId).order('timestamp', { ascending: true });
-            if (error) return;
-            currentMessages = data.map(m => ({
-                id: m.id, text: m.text, senderId: m.sender_id, senderName: m.sender_name,
-                timestamp: m.timestamp ? new Date(m.timestamp) : null
-            }));
-            updateChatThreadUI();
+            // No-op, handled by subscription
         }
 
         function updateChatThreadUI() {
@@ -1765,16 +1788,14 @@
             input.value = ''; // Clear locally
 
             try {
-                // Add message
-                const { error } = await window.supabase.from('messages').insert({
+                // Add message to Firestore
+                await db.collection('messages').add({
                     chat_id: chatId,
                     text: text,
                     sender_id: currentUser.uid,
                     sender_name: currentUser.name,
                     timestamp: new Date().toISOString()
                 });
-
-                if (error) throw error;
 
                 // Update chat metadata
                 const isUserAdmin = currentUser.role === 'admin';
@@ -1785,7 +1806,7 @@
                     unread_client: isUserAdmin ? 1 : 0
                 };
 
-                await window.supabase.from('chats').update(updateData).eq('id', chatId);
+                await db.collection('chats').doc(chatId).update(updateData);
 
             } catch (e) {
                 console.error("Send Error", e);
@@ -2067,11 +2088,7 @@
             const email = document.getElementById('login-email').value;
             const pass = document.getElementById('login-password').value;
             try {
-                const { data, error } = await window.supabase.auth.signInWithPassword({
-                    email: email,
-                    password: pass,
-                });
-                if (error) throw error;
+                await auth.signInWithEmailAndPassword(email, pass);
                 // Listener will update UI
             } catch (error) {
                 alert("Login failed: " + error.message);
@@ -2086,18 +2103,21 @@
             if (!name) return alert("Name is required");
 
             try {
-                const { data, error } = await window.supabase.auth.signUp({
-                    email: email,
-                    password: pass,
-                    options: {
-                        data: {
-                            full_name: name,
-                            name: name
-                        }
-                    }
+                const userCredential = await auth.createUserWithEmailAndPassword(email, pass);
+                // Update profile
+                await userCredential.user.updateProfile({
+                    displayName: name
                 });
-                if (error) throw error;
-                alert("Registration successful! Please check your email to verify if required.");
+
+                // Add to users collection using Firestore
+                await db.collection('users').doc(userCredential.user.uid).set({
+                    email: email,
+                    name: name,
+                    role: 'user', // Default role
+                    created_at: new Date().toISOString()
+                });
+
+                alert("Registration successful!");
             } catch (error) {
                 alert("Registration failed: " + error.message);
                 console.error("Registration Error:", error);
@@ -2106,13 +2126,8 @@
 
         window.googleLogin = async function () {
             try {
-                const { data, error } = await window.supabase.auth.signInWithOAuth({
-                    provider: 'google',
-                    options: {
-                        redirectTo: window.location.href
-                    }
-                });
-                if (error) throw error;
+                const provider = new firebase.auth.GoogleAuthProvider();
+                await auth.signInWithPopup(provider);
             } catch (error) {
                 alert("Google Login failed: " + error.message);
                 console.error("Google Login Error:", error);
@@ -2121,24 +2136,23 @@
 
         window.logout = async function () {
             try {
-                const { error } = await window.supabase.auth.signOut();
-                if (error) throw error;
+                await auth.signOut();
             } catch (error) {
                 console.error("Logout Error:", error);
             }
         };
 
-        function handleAuthChange(session) {
-            if (session?.user) {
-                const user = session.user;
+        function handleAuthChange(user) {
+            if (user) {
                 const isAdmin = adminEmails.includes(user.email);
                 currentUser = {
-                    name: user.user_metadata.full_name || user.user_metadata.name || user.email.split('@')[0],
+                    uid: user.uid,
+                    name: user.displayName || user.email.split('@')[0],
                     email: user.email,
-                    role: isAdmin ? 'admin' : 'user',
-                    photoURL: user.user_metadata.avatar_url || user.user_metadata.picture,
-                    uid: user.id
+                    photoURL: user.photoURL,
+                    role: isAdmin ? 'admin' : 'user'
                 };
+
                 console.log("User logged in:", currentUser);
                 if (state.page === 'profile') updateUI();
                 subscribeToChats();
@@ -2153,13 +2167,10 @@
 
         // Auth Listener
         window.addEventListener('load', () => {
-            window.supabase.auth.getSession().then(({ data: { session } }) => {
-                handleAuthChange(session);
-                loadData(); // Fetch data on load
-            });
-
-            window.supabase.auth.onAuthStateChange((_event, session) => {
-                handleAuthChange(session);
+            // Init Auth Listener
+            auth.onAuthStateChanged(user => {
+                handleAuthChange(user);
+                loadData();
             });
         });
 
@@ -2235,71 +2246,60 @@
 
         // Seed Database Function (Stubbbed for Supabase)
         // Seed Database Function (Supabase)
+        // Seed Database Function (Firebase)
         async function seedDatabase() {
-            if (!confirm('This will upload current hardcoded categories and products to Supabase. Make sure you have created the tables first. Continue?')) return;
+            if (!confirm('This will upload current hardcoded categories and products to Firestore. Make sure you have created the database first. Continue?')) return;
             console.log('Starting seed process...');
             alert("Starting Seed Process... Check Console for progress.");
 
             try {
+                const batch = db.batch(); // Use batch for cleaner atomic writes if possible, OR standard loop
+
                 for (const cat of categories) {
                     // Create Category
-                    const { data: catData, error: catError } = await window.supabase
-                        .from('categories')
-                        .insert({
-                            name: cat.name,
-                            image: cat.image,
-                            color: cat.color,
-                            icon_name: cat.iconName
-                        })
-                        .select()
-                        .single();
+                    const catRef = db.collection('categories').doc(); // Auto-ID
+                    await catRef.set({
+                        id: catRef.id, // Generate ID within doc for compatibility
+                        name: cat.name,
+                        image: cat.image,
+                        color: cat.color,
+                        icon_name: cat.iconName
+                    });
 
-                    if (catError) {
-                        console.error(`Error creating category ${cat.name}: `, catError);
-                        continue;
-                    }
                     console.log(`Created category: ${cat.name} `);
 
                     for (const sub of cat.subcategories) {
                         // Create Subcategory
-                        const { data: subData, error: subError } = await window.supabase
-                            .from('subcategories')
-                            .insert({
-                                name: sub.name,
-                                image: sub.image,
-                                category_id: catData.id
-                            })
-                            .select()
-                            .single();
-
-                        if (subError) {
-                            console.error(`  Error creating subcategory ${sub.name}: `, subError);
-                            continue;
-                        }
+                        const subRef = db.collection('subcategories').doc();
+                        await subRef.set({
+                            id: subRef.id,
+                            name: sub.name,
+                            image: sub.image,
+                            category_id: catRef.id
+                        });
 
                         // Create Products
-                        const productsPayload = sub.products.map(prod => ({
-                            name: prod.name,
-                            company: prod.company,
-                            price: prod.price,
-                            original_price: prod.originalPrice,
-                            unit: prod.unit,
-                            rating: prod.rating,
-                            reviews: prod.reviews,
-                            image: prod.image,
-                            subcategory_id: subData.id,
-                            category_id: catData.id
-                        }));
-
-                        const { error: prodError } = await window.supabase
-                            .from('products')
-                            .insert(productsPayload);
-
-                        if (prodError) console.error(`    Error inserting products for ${sub.name}: `, prodError);
-                        else console.log(`    Inserted ${productsPayload.length} products for ${sub.name}`);
+                        for (const prod of sub.products) {
+                            const prodRef = db.collection('products').doc();
+                            await prodRef.set({
+                                id: prodRef.id,
+                                name: prod.name,
+                                company: prod.company,
+                                price: prod.price,
+                                original_price: prod.originalPrice,
+                                unit: prod.unit,
+                                rating: prod.rating,
+                                reviews: prod.reviews,
+                                image: prod.image,
+                                subcategory_id: subRef.id,
+                                category_id: catRef.id,
+                                discount: prod.discount || false
+                            });
+                        }
+                        console.log(`    Inserted products for ${sub.name}`);
                     }
                 }
-                alert('Seeding completed! You can now browse your data in Supabase.');
+                alert('Seeding completed! You can now browse your data in Firestore.');
             } catch (err) {
                 console.error('Seed Error:', err);
                 alert('Error during seeding: ' + err.message);
