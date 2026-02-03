@@ -1571,8 +1571,7 @@
         async function updateOrderStatus(id, status) {
             if (!confirm(`Mark order as ${status}?`)) return;
             try {
-                const { error } = await window.supabase.from('orders').update({ status }).eq('id', id);
-                if (error) throw error;
+                await db.collection('orders').doc(id).update({ status });
                 showToast(`Order marked as ${status} `);
                 loadData(); // Reload orders
             } catch (e) {
@@ -1585,7 +1584,7 @@
             if (!currentUser || currentUser.role !== 'admin') return navigateTo('home');
 
             document.getElementById('main-content').innerHTML = `
-                <div class="p-4 space-y-4" >
+                <div class="p-4 space-y-4">
                     ${orders.length === 0 ? '<div class="text-center py-10 text-gray-500">No orders yet</div>' :
                     orders.map(o => `
                 <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
@@ -1611,9 +1610,9 @@
                     ${o.status !== 'delivered' ? `
                     <div class="flex gap-2 border-t pt-3">
                         ${o.status === 'pending' ? `
-                        <button onclick="updateOrderStatus(${o.id}, 'shipped')" class="flex-1 bg-blue-50 text-blue-600 py-2 rounded-lg text-sm font-bold hover:bg-blue-100 transition-colors">Mark Shipped</button>` : ''}
+                        <button onclick="updateOrderStatus('${o.id}', 'shipped')" class="flex-1 bg-blue-50 text-blue-600 py-2 rounded-lg text-sm font-bold hover:bg-blue-100 transition-colors">Mark Shipped</button>` : ''}
                         ${o.status === 'shipped' || o.status === 'pending' ? `
-                        <button onclick="updateOrderStatus(${o.id}, 'delivered')" class="flex-1 bg-green-50 text-green-600 py-2 rounded-lg text-sm font-bold hover:bg-green-100 transition-colors">Mark Delivered</button>` : ''}
+                        <button onclick="updateOrderStatus('${o.id}', 'delivered')" class="flex-1 bg-green-50 text-green-600 py-2 rounded-lg text-sm font-bold hover:bg-green-100 transition-colors">Mark Delivered</button>` : ''}
                     </div>` : ''}
                 </div>`).join('')
                 }
@@ -1753,16 +1752,23 @@
                     </div>
                  </div>
                  
-                 <div class="fixed bottom-0 left-0 right-0 p-2 bg-transparent max-w-md mx-auto z-50">
-                     <div class="bg-white rounded-full flex items-center px-2 py-1 shadow-lg gap-2">
-                         <button class="p-2 text-gray-400"><i data-lucide="plus" class="w-6 h-6"></i></button>
-                         <input type="text" id="message-input" onkeypress="if(event.key === 'Enter') sendMessage()" placeholder="Message" class="flex-1 border-none focus:ring-0 text-base bg-transparent p-2">
-                         <button onclick="sendMessage()" class="p-2 text-green-600"><i data-lucide="send" class="w-6 h-6"></i></button>
+                 <!-- WhatsApp Style Bottom Bar -->
+                 <div class="fixed bottom-0 left-0 right-0 bg-gray-50 px-2 py-2 flex items-end gap-2 border-t border-gray-200 z-50 max-w-md mx-auto">
+                     <button onclick="document.getElementById('chat-file-input').click()" class="p-3 text-gray-500 hover:bg-gray-200 rounded-full mb-0.5 transition-colors">
+                         <i data-lucide="plus" class="w-6 h-6"></i>
+                     </button>
+                     <input type="file" id="chat-file-input" class="hidden" accept="image/*" onchange="handleChatImageSelect(this)">
+                     
+                     <div class="flex-1 bg-white rounded-2xl flex items-center border border-gray-200 shadow-sm min-h-[48px] px-4 py-2 focus-within:ring-1 focus-within:ring-green-500 focus-within:border-green-500 transition-all">
+                         <input type="text" id="message-input" onkeypress="if(event.key === 'Enter') sendMessage()" placeholder="Message" class="w-full border-none focus:ring-0 text-base bg-transparent p-0 max-h-32 placeholder:text-gray-400">
                      </div>
+                     
+                     <button onclick="sendMessage()" class="p-3 bg-green-500 text-white rounded-full shadow-md hover:bg-green-600 mb-0.5 transition-all active:scale-95 flex items-center justify-center">
+                         <i data-lucide="send" class="w-5 h-5 ml-0.5"></i>
+                     </button>
                  </div>
              </div> `;
 
-            // Firestore Realtime Listener
             // Firestore Realtime Listener
             messagesUnsubscribe = db.collection('messages')
                 .where('chat_id', '==', chatId)
@@ -1808,13 +1814,16 @@
                 return `
                 <div class="flex ${isMe ? 'justify-end' : 'justify-start'}" >
                     <div class="${isMe ? 'chat-bubble-mine' : 'chat-bubble-theirs'} px-3 py-1.5 max-w-[80%] shadow-sm text-sm relative group">
-                        <p class="mr-12 mb-1 text-gray-900">${m.text}</p>
+                        ${m.type === 'image' ?
+                        `<img src="${m.image}" class="rounded-lg mb-1 max-w-[200px] cursor-pointer" onclick="window.open('${m.image}', '_blank')">`
+                        : `<p class="mr-12 mb-1 text-gray-900">${m.text}</p>`
+                    }
                         <span class="text-[10px] text-gray-500 absolute bottom-1 right-2 flex items-center gap-0.5">
                             ${time}
                             ${isMe ? '<i data-lucide="check-check" class="w-3 h-3 text-blue-500"></i>' : ''}
                         </span>
                     </div>
-                      </div>
+                </div>
                 `;
             }).join('');
             container.scrollTop = container.scrollHeight;
@@ -1836,6 +1845,7 @@
                 await db.collection('messages').add({
                     chat_id: chatId,
                     text: text,
+                    type: 'text',
                     sender_id: currentUser.uid,
                     sender_name: currentUser.name,
                     timestamp: new Date().toISOString()
@@ -1863,7 +1873,7 @@
             const isAdmin = currentUser && currentUser.role === 'admin';
 
             document.getElementById('main-content').innerHTML = `
-                <div class="bg-white" >
+                <div class="bg-white">
                  <div class="p-4 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white z-10">
                     <h2 class="text-xl font-bold text-gray-900">News & Updates</h2>
                      ${isAdmin ? `<button onclick="openEditModal('create', 'news')" class="text-xs bg-pharmeasy-teal text-white px-3 py-1.5 rounded-full font-bold shadow-sm flex items-center gap-1"><i data-lucide="plus" class="w-3 h-3"></i> Add Post</button>` : ''}
@@ -1911,7 +1921,7 @@
                 </div>
                 `).join('')}
                 </div>
-            </div> `;
+            </div > `;
         }
 
         function toggleLike(btn) {
@@ -1942,7 +1952,7 @@
             const safeCategories = categories || [];
 
             document.getElementById('main-content').innerHTML = `
-                <div class="p-3 pb-24" >
+                <div class="p-3 pb-24">
                 <div class="flex items-center justify-between mb-3">
                     <h2 class="text-xl font-bold text-gray-900">All Categories</h2>
                     ${isAdmin ? `<button onclick="openEditModal('create', 'category')" class="text-xs bg-pharmeasy-teal text-white px-3 py-1.5 rounded-full font-bold shadow-sm flex items-center gap-1"><i data-lucide="plus" class="w-3 h-3"></i> Add</button>` : ''}
@@ -1990,7 +2000,7 @@
             const isRootPage = ['home', 'categories', 'news', 'cart', 'profile'].includes(state.page);
 
             header.innerHTML = `
-                <div class="flex items-center gap-3 px-4 py-3" >
+                <div class="flex items-center gap-3 px-4 py-3">
                     ${!isRootPage ? `<button onclick="goBack()" class="p-1 -ml-2 text-gray-800"><i data-lucide="chevron-left" class="w-6 h-6"></i></button>` : `<div class="font-bold text-xl tracking-tight text-pharmeasy-teal">Glo-Med</div>`}
                
                ${showSearch ? `
@@ -2053,7 +2063,7 @@
             if (currentUser) {
                 // Logged In View
                 h.innerHTML = `
-                <div class="p-6" >
+                <div class="p-6">
                     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col items-center mb-6">
                         <div class="w-24 h-24 rounded-full bg-pharmeasy-teal/10 flex items-center justify-center text-pharmeasy-teal text-3xl font-bold mb-4 overflow-hidden">
                             ${currentUser.photoURL ? `<img src="${currentUser.photoURL}" class="w-full h-full object-cover">` : currentUser.name.charAt(0)}
@@ -2079,7 +2089,7 @@
             } else {
                 // Login/Register View
                 h.innerHTML = `
-                <div class="p-6" >
+                <div class="p-6">
                     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                         <h2 class="text-2xl font-bold text-gray-900 mb-6 text-center">Welcome to Glo-Med</h2>
 
@@ -2198,6 +2208,44 @@
             }
         };
 
+        async function uploadChatImage(file) {
+            const fileName = `chat_uploads/${Date.now()}_${currentUser.uid}_${file.name.replace(/[^a-zA-Z0-9]/g, '_')}`;
+            const ref = storage.ref(fileName);
+            await ref.put(file);
+            return await ref.getDownloadURL();
+        }
+
+        async function handleChatImageSelect(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            showToast("Uploading image...");
+
+            try {
+                const url = await uploadChatImage(file);
+                await db.collection('messages').add({
+                    chat_id: state.activeChat,
+                    text: 'Sent an image',
+                    image: url,
+                    type: 'image',
+                    sender_id: currentUser.uid,
+                    sender_name: currentUser.name,
+                    timestamp: new Date().toISOString()
+                });
+
+                // Update chat metadata
+                await db.collection('chats').doc(state.activeChat).update({
+                    last_message: '📷 Image',
+                    last_message_time: new Date().toISOString(),
+                    unread_admin: currentUser.role === 'admin' ? 0 : firebase.firestore.FieldValue.increment(1),
+                    unread_client: currentUser.role === 'admin' ? firebase.firestore.FieldValue.increment(1) : 0
+                });
+            } catch (e) {
+                console.error(e);
+                showToast("Failed to upload image");
+            }
+        }
+
         function handleAuthChange(user) {
             if (user) {
                 const isAdmin = adminEmails.includes(user.email);
@@ -2280,13 +2328,13 @@
                 const colorClass = t.id === 'chat' ? 'text-green-500' : (isActive ? 'text-black' : 'text-gray-400');
 
                 return `
-                <div onclick = "setPage('${t.id}')" class="nav-item ${isActive ? 'active' : ''} flex-1 flex flex-col items-center justify-center cursor-pointer relative" >
+                <div onclick="setPage('${t.id}')" class="nav-item ${isActive ? 'active' : ''} flex-1 flex flex-col items-center justify-center cursor-pointer relative">
                     <div class="relative">
                         <i data-lucide="${t.icon}" class="w-6 h-6 ${colorClass}"></i>
                         ${t.badge > 0 ? `<div class="cart-badge absolute -top-1 -right-2 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center">${t.badge}</div>` : ''}
                     </div>
                     <span class="text-[10px] mt-1 ${isActive ? 'font-bold text-black' : 'text-gray-500'}">${t.label}</span>
-                </div>
+                </div >
                 `;
             }).join('');
 
