@@ -1730,44 +1730,53 @@
             // Subscribe logic reused...
             if (messagesUnsubscribe) { messagesUnsubscribe(); messagesUnsubscribe = null; }
 
-            // Render Container with WhatsApp BG
             document.getElementById('main-content').innerHTML = `
-                <div class="flex flex-col h-full relative bg-[#e5ddd5]" style = "background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');" >
-                 
+                <div class="flex flex-col h-full relative bg-[#efe7dd] bg-repeat" style="background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');">
+                 <audio id="chat-sound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3"></audio>
+
                  <!--Chat Header-->
-                 <div class="bg-white p-3 flex items-center gap-3 sticky top-0 shadow-sm z-20">
-                    <button onclick="navigateTo('${isUserAdmin ? 'chat' : 'home'}')" class="text-green-600"><i data-lucide="arrow-left" class="w-6 h-6"></i></button>
-                    <div class="w-10 h-10 rounded-full bg-gray-200 overflow-hidden">
+                 <div class="bg-[#008069] p-2 flex items-center gap-2 sticky top-0 shadow-sm z-20 text-white">
+                    <button onclick="navigateTo('${isUserAdmin ? 'chat' : 'home'}')" class="p-1"><i data-lucide="arrow-left" class="w-6 h-6 text-white"></i></button>
+                    <div class="w-9 h-9 rounded-full bg-gray-200 overflow-hidden">
                         <img src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=100&h=100&fit=crop" class="w-full h-full object-cover">
                     </div>
                     <div>
-                        <h3 class="font-bold text-gray-900">${isUserAdmin ? state.activeChatUserName || 'User' : 'Support Team'}</h3>
-                        <p class="text-xs text-green-500">Online</p>
+                        <h3 class="font-bold text-white text-base leading-tight">${isUserAdmin ? state.activeChatUserName || 'User' : 'Support Team'}</h3>
+                        <p class="text-[11px] text-white/80">Online</p>
                     </div>
                  </div>
 
                  <div id="messages-container" class="flex-1 p-4 space-y-2 overflow-y-auto pb-20">
                     <div class="flex items-center justify-center h-full">
-                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
+                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-[#008069]"></div>
                     </div>
                  </div>
                  
-                 <!-- WhatsApp Style Bottom Bar -->
-                 <div class="fixed bottom-0 left-0 right-0 bg-gray-50 px-2 py-2 flex items-end gap-2 border-t border-gray-200 z-50 max-w-md mx-auto">
-                     <button onclick="document.getElementById('chat-file-input').click()" class="p-3 text-gray-500 hover:bg-gray-200 rounded-full mb-0.5 transition-colors">
-                         <i data-lucide="plus" class="w-6 h-6"></i>
-                     </button>
-                     <input type="file" id="chat-file-input" class="hidden" accept="image/*" onchange="handleChatImageSelect(this)">
-                     
-                     <div class="flex-1 bg-white rounded-2xl flex items-center border border-gray-200 shadow-sm min-h-[48px] px-4 py-2 focus-within:ring-1 focus-within:ring-green-500 focus-within:border-green-500 transition-all">
-                         <input type="text" id="message-input" onkeypress="if(event.key === 'Enter') sendMessage()" placeholder="Message" class="w-full border-none focus:ring-0 text-base bg-transparent p-0 max-h-32 placeholder:text-gray-400">
+                 <!-- WA Style Input Bar -->
+                 <div class="fixed bottom-0 left-0 right-0 bg-[#f0f2f5] px-2 py-2 flex items-end gap-2 z-50 max-w-md mx-auto min-h-[60px] pb-3">
+                     <div class="flex-1 bg-white rounded-[24px] flex items-center px-4 py-2 shadow-sm border border-transparent focus-within:border-white transition-all">
+                        <button onclick="document.getElementById('chat-file-input').click()" class="text-gray-400 hover:text-gray-600 mr-3 -ml-1">
+                             <i data-lucide="camera" class="w-6 h-6"></i>
+                        </button>
+                        <input type="file" id="chat-file-input" class="hidden" accept="image/*" onchange="handleChatImageSelect(this)">
+                        
+                        <input type="text" id="message-input" 
+                               onkeypress="if(event.key === 'Enter') sendMessage()" 
+                               placeholder="Type a message" 
+                               class="w-full border-none focus:ring-0 text-base bg-transparent p-0 placeholder:text-gray-400 h-6">
+                        
+                        <button class="text-gray-400 hover:text-gray-600 ml-3 rotate-45 transform">
+                            <i data-lucide="paperclip" class="w-5 h-5"></i>
+                        </button>
                      </div>
                      
-                     <button onclick="sendMessage()" class="p-3 bg-green-500 text-white rounded-full shadow-md hover:bg-green-600 mb-0.5 transition-all active:scale-95 flex items-center justify-center">
+                     <button onclick="sendMessage()" class="w-11 h-11 bg-[#008069] text-white rounded-full shadow-md hover:bg-[#006e5a] transition-all flex items-center justify-center active:scale-95 mb-0.5">
                          <i data-lucide="send" class="w-5 h-5 ml-0.5"></i>
                      </button>
                  </div>
              </div> `;
+
+            let initialLoad = true;
 
             // Firestore Realtime Listener
             messagesUnsubscribe = db.collection('messages')
@@ -1784,6 +1793,22 @@
                     currentMessages = rawMessages.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
 
                     updateChatThreadUI();
+
+                    // Sound Notification Logic
+                    if (!initialLoad) {
+                        snapshot.docChanges().forEach((change) => {
+                            if (change.type === "added") {
+                                const msg = change.doc.data();
+                                // Play sound if message is NOT from me
+                                if (msg.sender_id !== currentUser.uid) {
+                                    const audio = document.getElementById('chat-sound');
+                                    if (audio) audio.play().catch(e => console.log("Audio play failed (interaction needed)", e));
+                                }
+                            }
+                        });
+                    }
+                    initialLoad = false;
+
                 }, error => {
                     console.error("Msg Subscription Error", error);
                     const container = document.getElementById('messages-container');
