@@ -2336,9 +2336,10 @@
 
             // Hide bottom nav in chat thread
             if (state.page === 'chat-thread') {
-                nav.innerHTML = '';
+                nav.classList.add('hidden');
                 return;
             }
+            nav.classList.remove('hidden');
 
             const tabs = [
                 { id: 'home', icon: 'home', label: 'Home' },
