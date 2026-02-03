@@ -2261,6 +2261,12 @@
             const nav = document.getElementById('bottom-nav');
             if (!nav) return;
 
+            // Hide bottom nav in chat thread
+            if (state.page === 'chat-thread') {
+                nav.innerHTML = '';
+                return;
+            }
+
             const tabs = [
                 { id: 'home', icon: 'home', label: 'Home' },
                 { id: 'categories', icon: 'grid', label: 'Categories' }, // New Categories Tab
