@@ -774,6 +774,7 @@
 
                 // Fetch Orders (if admin)
                 let ords = [];
+                const isAdmin = currentUser && currentUser.role === 'admin';
                 if (isAdmin) {
                     const ordSnap = await db.collection('orders').orderBy('created_at', 'desc').get();
                     ords = ordSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -2441,6 +2442,168 @@
                 alert('Error during seeding: ' + err.message);
             }
         }
+
+        // --- Admin CRUD Logic ---
+        window.openEditModal = function (mode, type, id) {
+            const modal = document.getElementById('edit-modal');
+            const content = document.getElementById('edit-modal-content');
+            const title = document.getElementById('edit-modal-title');
+            const saveBtn = document.getElementById('edit-save-btn');
+
+            if (!modal || !content) return;
+
+            title.innerText = mode === 'create' ? `Add New ${type}` : `Edit ${type}`;
+            modal.classList.remove('hidden');
+
+            // Generate Form
+            let html = '';
+            let currentItem = null;
+
+            // Helper to find item
+            if (mode === 'edit' && id) {
+                if (type === 'category') currentItem = categories.find(c => c.id === id);
+                if (type === 'subcategory') {
+                    // Find in all cats
+                    for (let c of categories) {
+                        const sub = (c.subcategories || []).find(s => s.id === id);
+                        if (sub) { currentItem = sub; break; }
+                    }
+                }
+                if (type === 'product') {
+                    // Find in all subs
+                    for (let c of categories) {
+                        for (let s of c.subcategories || []) {
+                            const p = (s.products || []).find(p => p.id === id);
+                            if (p) { currentItem = p; break; }
+                        }
+                    }
+                }
+                if (type === 'news') currentItem = newsPosts[parseInt(id)];
+            }
+
+            if (type === 'category') {
+                html = `
+                     <input id="edit-name" class="w-full border p-2 rounded" placeholder="Category Name" value="${currentItem ? currentItem.name : ''}">
+                     <input id="edit-image" class="w-full border p-2 rounded" placeholder="Image URL" value="${currentItem ? currentItem.image : ''}">
+                 `;
+            } else if (type === 'subcategory') {
+                html = `
+                     <input id="edit-name" class="w-full border p-2 rounded" placeholder="Collection Name" value="${currentItem ? currentItem.name : ''}">
+                     <input id="edit-image" class="w-full border p-2 rounded" placeholder="Image URL" value="${currentItem ? currentItem.image : ''}">
+                 `;
+            } else if (type === 'product') {
+                html = `
+                     <input id="edit-name" class="w-full border p-2 rounded" placeholder="Product Name" value="${currentItem ? currentItem.name : ''}">
+                     <input id="edit-company" class="w-full border p-2 rounded" placeholder="Company" value="${currentItem ? currentItem.company : ''}">
+                     <input id="edit-price" class="w-full border p-2 rounded" placeholder="Price (e.g. UGX 5,000)" value="${currentItem ? currentItem.price : ''}">
+                     <input id="edit-image" class="w-full border p-2 rounded" placeholder="Image URL" value="${currentItem ? currentItem.image : ''}">
+                     <textarea id="edit-desc" class="w-full border p-2 rounded" placeholder="Description">${currentItem && currentItem.description ? currentItem.description : ''}</textarea>
+                 `;
+            } else if (type === 'news') {
+                html = `
+                     <input id="edit-title" class="w-full border p-2 rounded" placeholder="Title" value="${currentItem ? currentItem.title : ''}">
+                     <textarea id="edit-desc" class="w-full border p-2 rounded" placeholder="Description">${currentItem ? currentItem.description : ''}</textarea>
+                     <input id="edit-image" class="w-full border p-2 rounded" placeholder="Image URL" value="${currentItem ? currentItem.image : ''}">
+                 `;
+            }
+
+            content.innerHTML = html;
+
+            // Setup Save Handler
+            saveBtn.onclick = () => saveItem(mode, type, id);
+        };
+
+        window.closeEditModal = function () {
+            document.getElementById('edit-modal').classList.add('hidden');
+        };
+
+        window.saveItem = async function (mode, type, id) {
+            const nameVal = document.getElementById('edit-name')?.value;
+            const imageVal = document.getElementById('edit-image')?.value;
+            // ... other vals
+
+            showToast("Saving...");
+
+            try {
+                let colName = '';
+                let data = {};
+
+                if (type === 'category') {
+                    colName = 'categories';
+                    data = { name: nameVal, image: imageVal };
+                } else if (type === 'subcategory') {
+                    colName = 'subcategories';
+                    data = { name: nameVal, image: imageVal };
+                    if (mode === 'create') data.category_id = id; // id passed is parent id for create
+                } else if (type === 'product') {
+                    colName = 'products';
+                    data = {
+                        name: nameVal,
+                        company: document.getElementById('edit-company').value,
+                        price: document.getElementById('edit-price').value,
+                        image: imageVal,
+                        description: document.getElementById('edit-desc').value
+                    };
+                    if (mode === 'create') data.subcategory_id = id;
+                } else if (type === 'news') {
+                    // Update global newsPosts array for now or migrate to Firestore? 
+                    // Let's assume Firestore 'news' collection for persistence if desired, 
+                    // but for now user likely expects simple edits. 
+                    // Wait, previous code used `newsPosts` array. I should stick to that unless I migrate.
+                    // But persistent changes require Firestore.
+                    // I will alert that news is static for now or try Firestore.
+                    // Let's implement Firestore for consistency.
+                    colName = 'news';
+                    data = {
+                        title: document.getElementById('edit-title').value,
+                        description: document.getElementById('edit-desc').value,
+                        image: imageVal,
+                        type: 'image',
+                        timestamp: new Date().toISOString()
+                    };
+                }
+
+                if (colName) {
+                    if (mode === 'create') {
+                        await db.collection(colName).add(data);
+                    } else {
+                        if (type === 'news') {
+                            // News ID is index for now? Or migrating?
+                            // If migrated, ID is doc ID. If not, it's index.
+                            alert("News editing pending migration to Firestore.");
+                            return;
+                        }
+                        await db.collection(colName).doc(id).update(data);
+                    }
+                    closeEditModal();
+                    loadData();
+                    showToast("Saved Successfully");
+                }
+
+            } catch (e) {
+                console.error(e);
+                alert("Save Failed: " + e.message);
+            }
+        };
+
+        window.deleteItem = async function (type, id) {
+            if (!confirm("Are you sure you want to delete this item?")) return;
+            showToast("Deleting...");
+            try {
+                let colName = type === 'category' ? 'categories' :
+                    type === 'subcategory' ? 'subcategories' :
+                        type === 'product' ? 'products' : null;
+
+                if (colName) {
+                    await db.collection(colName).doc(id).delete();
+                    loadData();
+                    showToast("Deleted");
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Delete Failed");
+            }
+        };
 
         // PWA Registration
         if ('serviceWorker' in navigator) {
