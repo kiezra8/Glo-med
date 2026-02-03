@@ -1737,7 +1737,7 @@
 
                  <!--Chat Header-->
                  <div class="bg-[#008069] p-2 flex items-center gap-2 sticky top-0 shadow-sm z-20 text-white">
-                    <button onclick="navigateTo('${isUserAdmin ? 'chat' : 'home'}')" class="p-1"><i data-lucide="arrow-left" class="w-6 h-6 text-white"></i></button>
+                    <button onclick="navigateTo('chat')" class="p-1"><i data-lucide="arrow-left" class="w-6 h-6 text-white"></i></button>
                     <div class="w-9 h-9 rounded-full bg-gray-200 overflow-hidden">
                         <img src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=100&h=100&fit=crop" class="w-full h-full object-cover">
                     </div>
@@ -2237,6 +2237,12 @@
         async function uploadChatImage(file) {
             const fileName = `chat_uploads/${Date.now()}_${currentUser.uid}_${file.name.replace(/[^a-zA-Z0-9]/g, '_')}`;
             const ref = storage.ref(fileName);
+            await ref.put(file);
+            return await ref.getDownloadURL();
+        }
+
+        async function handleFileUpload(file, path) {
+            const ref = storage.ref(path);
             await ref.put(file);
             return await ref.getDownloadURL();
         }
