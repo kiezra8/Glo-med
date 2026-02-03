@@ -1147,12 +1147,14 @@
                 state.selectedCategory = null;
                 state.selectedSubcategory = null;
                 state.activeChat = null;
+                state.activeChatUserName = null;
             }
 
             state.page = page;
 
             if (page === 'chat-thread') {
                 state.activeChat = params.chatId;
+                if (params.userName) state.activeChatUserName = params.userName;
             }
 
             updateUI();
@@ -1654,7 +1656,7 @@
                         </div>
                     ` : ''}
                     ${chats.map(chat => `
-                    <div onclick="navigateTo('chat-thread', {chatId: '${chat.id}'})" class="chat-row flex items-center gap-3 p-4 hover:bg-gray-50 cursor-pointer">
+                    <div onclick="navigateTo('chat-thread', {chatId: '${chat.id}', userName: '${chat.userName || 'User'}'})" class="chat-row flex items-center gap-3 p-4 hover:bg-gray-50 cursor-pointer">
                         <div class="relative">
                             <img src="${chat.avatar || 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=100&h=100&fit=crop'}" class="w-12 h-12 rounded-full object-cover">
                             ${chat.unread > 0 ? `<div class="absolute -top-1 -right-1 bg-green-500 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full border-2 border-white font-bold">${chat.unread}</div>` : ''}
@@ -1761,17 +1763,25 @@
              </div> `;
 
             // Firestore Realtime Listener
+            // Firestore Realtime Listener
             messagesUnsubscribe = db.collection('messages')
                 .where('chat_id', '==', chatId)
-                .orderBy('timestamp', 'asc')
+                // .orderBy('timestamp', 'asc') // Removed to prevent index errors
                 .onSnapshot(snapshot => {
-                    currentMessages = snapshot.docs.map(doc => ({
+                    const rawMessages = snapshot.docs.map(doc => ({
                         id: doc.id,
                         ...doc.data(),
                         timestamp: doc.data().timestamp ? new Date(doc.data().timestamp) : null,
                         senderId: doc.data().sender_id
                     }));
+                    // Client-side sort
+                    currentMessages = rawMessages.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+
                     updateChatThreadUI();
+                }, error => {
+                    console.error("Msg Subscription Error", error);
+                    const container = document.getElementById('messages-container');
+                    if (container) container.innerHTML = `<div class="p-4 text-center text-red-500 text-xs">Failed to load messages. Please ensure indices are created or check console.</div>`;
                 });
 
             // Reset unread
