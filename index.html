@@ -1476,7 +1476,7 @@
 
                 function navigateTo(page, params = {}) {
                     // Reset states
-                    if (page === 'home' || page === 'categories' || page === 'cart' || page === 'chat' || page === 'news' || page === 'new-products') {
+                    if (page === 'home' || page === 'categories' || page === 'cart' || page === 'chat' || page === 'new-products') {
                         state.selectedCategory = null;
                         state.selectedSubcategory = null;
                         state.activeChat = null;
@@ -1593,8 +1593,12 @@
 
                <div class="flex items-center gap-1">
                    <button onclick="navigateTo('cart')" class="p-2 text-black hover:bg-gray-100 rounded-full relative" aria-label="Cart">
-                       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
-                       ${state.cart.length > 0 ? `<div class="absolute top-1 right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-white text-white text-[10px] flex items-center justify-center font-bold">${state.cart.length}</div>` : ''}
+                       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6">
+                           <circle cx="8" cy="21" r="1"/>
+                           <circle cx="19" cy="21" r="1"/>
+                           <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>
+                       </svg>
+                       ${state.cart.length > 0 ? `<div class="absolute top-0 right-0 w-5 h-5 bg-red-500 rounded-full border-2 border-white text-white text-[10px] flex items-center justify-center font-bold">${state.cart.length}</div>` : ''}
                    </button>
                     <button onclick="navigateTo('profile')" class="w-9 h-9 rounded-full overflow-hidden border border-gray-200 flex items-center justify-center ml-1">
                          ${currentUser && currentUser.photoURL ? `<img src="${currentUser.photoURL}" class="w-full h-full object-cover">` : `<i data-lucide="user" class="w-5 h-5 text-gray-500"></i>`}
@@ -2739,7 +2743,6 @@
                     else if (state.page === 'categories') renderCategories();
                     else if (state.page === 'subcategories') renderSubcategories();
                     else if (state.page === 'products') renderProducts();
-                    else if (state.page === 'news' || state.page === 'new-products') renderNews();
                     else if (state.page === 'search-results') renderSearchResults();
                     else if (state.page === 'cart') renderCart();
                     else if (state.page === 'chat') renderChat();
@@ -2763,9 +2766,9 @@
 
                     const tabs = [
                         { id: 'home', icon: 'home', label: 'Home' },
-                        { id: 'categories', icon: 'grid', label: 'Categories' }, // New Categories Tab
-                        { id: 'chat', icon: 'message-circle', label: 'Chat', customClass: 'text-green-500' }, // Green Chat Icon
-                        { id: 'news', icon: 'newspaper', label: 'News' } // News Tab instead of Profile
+                        { id: 'categories', icon: 'grid', label: 'Categories' },
+                        { id: 'chat', icon: 'message-circle', label: 'Chat', customClass: 'text-green-500' },
+                        { id: 'cart', icon: 'shopping-cart', label: 'Cart', badge: state.cart ? state.cart.length : 0 }
                     ];
 
                     nav.innerHTML = tabs.map(t => {
