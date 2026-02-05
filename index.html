@@ -523,16 +523,7 @@
                     {
                         name: 'General Equipment',
                         image: 'https://images.unsplash.com/photo-1615486511484-92e172cc4fe0?w=400&h=400&fit=crop',
-                        products: equipmentList.map(item => ({
-                            id: 'eq_' + item.name.replace(/\s+/g, '_').toLowerCase(),
-                            name: item.name,
-                            company: 'Generic',
-                            price: '0',
-                            image: item.image,
-                            description: 'Medical Equipment',
-                            rating: 4.5,
-                            reviews: 10
-                        }))
+                        products: []
                     }
                 ]
             },
@@ -543,16 +534,7 @@
                     {
                         name: 'General',
                         image: 'https://images.unsplash.com/photo-1631815588090-d4bfec5b1ccb?w=400&h=400&fit=crop',
-                        products: furnitureList.map(item => ({
-                            id: 'fur_' + item.name.replace(/\s+/g, '_').toLowerCase(),
-                            name: item.name,
-                            company: 'Generic',
-                            price: '0',
-                            image: item.image,
-                            description: 'Medical Furniture',
-                            rating: 4.5,
-                            reviews: 10
-                        }))
+                        products: []
                     }
                 ]
             }
@@ -913,7 +895,6 @@
                     updateUI();
                     return;
                 }
-
                 // Fetch Subcategories
                 const subSnap = await db.collection('subcategories').get();
                 const subs = subSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -931,51 +912,50 @@
                     orders = ords;
                 }
 
-                // Rebuild tree
-                // Deduplicate Categories by Name (prefer Firestore ones but start with defaults)
-                const uniqueCats = new Map();
-                // 1. Load Defaults First
-                defaultCategories.forEach(c => uniqueCats.set(c.name, { ...c }));
-
-                // 2. Overlay Firestore Data
-                cats.forEach(c => uniqueCats.set(c.name, c)); // Last one wins (usually FireStore)
-
-                categories = Array.from(uniqueCats.values()).map(c => ({
-                    id: c.id,
-                    name: c.name,
-                    image: c.image,
-                    color: c.color,
-                    iconName: c.icon_name,
-                    subcategories: subs.filter(s => s.category_id === c.id).map(s => ({
-                        id: s.id,
-                        name: s.name,
-                        image: s.image,
-                        products: prods.filter(p => p.subcategory_id === s.id).map(p => ({
-                            id: p.id,
-                            name: p.name,
-                            company: p.company,
-                            price: p.price,
-                            originalPrice: p.original_price,
-                            unit: p.unit,
-                            rating: p.rating,
-                            reviews: p.reviews,
-                            image: p.image,
-                            discount: p.discount
-                        }))
-                    }))
-                }));
-
-                // Populate Flash/Trending Products (5 from each category)
-                let trending = [];
-                categories.forEach(cat => {
-                    const catProds = cat.subcategories.flatMap(s => s.products);
-                    if (catProds.length > 0) {
-                        // Shuffle and take 5
-                        const shuffled = catProds.sort(() => 0.5 - Math.random());
-                        trending.push(...shuffled.slice(0, 5));
-                    }
+                // Rebuild categories with DB data
+                categories = cats.map(cat => {
+                    const catSubs = subs.filter(s => s.category_id === cat.id);
+                    return {
+                        id: cat.id,
+                        name: cat.name,
+                        image: cat.image,
+                        color: cat.color,
+                        iconName: cat.icon_name,
+                        subcategories: catSubs.map(sub => {
+                            const subProds = prods.filter(p => p.subcategory_id === sub.id);
+                            return {
+                                id: sub.id,
+                                name: sub.name,
+                                image: sub.image,
+                                products: subProds.map(p => ({
+                                    id: p.id,
+                                    name: p.name,
+                                    company: p.company,
+                                    price: p.price,
+                                    originalPrice: p.original_price,
+                                    unit: p.unit,
+                                    rating: p.rating,
+                                    reviews: p.reviews,
+                                    image: p.image,
+                                    description: p.description || '',
+                                    discount: p.discount
+                                }))
+                            };
+                        })
+                    };
                 });
-                flashDealProducts = trending;
+
+                // Populate Trending Products (30 total from all categories)
+                let allProducts = [];
+                categories.forEach(cat => {
+                    cat.subcategories.forEach(sub => {
+                        allProducts.push(...sub.products);
+                    });
+                });
+
+                // Shuffle and take 30 products for trending
+                const shuffled = allProducts.sort(() => 0.5 - Math.random());
+                flashDealProducts = shuffled.slice(0, 30);
 
                 console.log("Loaded data from Firestore:", categories.length);
                 updateUI();
@@ -1085,6 +1065,7 @@
                     { label: 'Company', key: 'company', type: 'text' },
                     { label: 'Price', key: 'price', type: 'text' },
                     { label: 'Unit', key: 'unit', type: 'text' },
+                    { label: 'Description', key: 'description', type: 'text' },
                     { label: 'Image URL', key: 'image', type: 'text' }
                 ];
                 if (mode === 'edit') {
