@@ -508,17 +508,43 @@
             {
                 iconName: 'package', name: 'Consumables', color: 'bg-orange-500',
                 image: 'https://iororwxhmiiqlq5p.leadongcdn.com/cloud/pnBplKplRllSqirjnqlrj/weixintupian_20250526144752.png',
-                subcategories: createSubcategories(consumableList, 'https://images.unsplash.com/photo-1584473457409-ae5c91d7a8cc?w=400&h=400&fit=crop')
-            },
-            {
-                iconName: 'stethoscope', name: 'Medical Equipment', color: 'bg-green-500',
-                image: 'https://images.unsplash.com/photo-1615486511484-92e172cc4fe0?w=400&h=400&fit=crop',
-                subcategories: createSubcategories(equipmentList, 'https://images.unsplash.com/photo-1615486511484-92e172cc4fe0?w=400&h=400&fit=crop')
+                subcategories: [
+                    ...createSubcategories(consumableList, 'https://images.unsplash.com/photo-1584473457409-ae5c91d7a8cc?w=400&h=400&fit=crop'),
+                    {
+                        name: 'Laboratory Equipment',
+                        image: 'https://images.unsplash.com/photo-1615486511484-92e172cc4fe0?w=400&h=400&fit=crop',
+                        products: equipmentList.map(item => ({
+                            id: 'eq_' + item.name.replace(/\s+/g, '_').toLowerCase(),
+                            name: item.name,
+                            company: 'Generic',
+                            price: '0',
+                            image: item.image,
+                            description: 'Medical Equipment',
+                            rating: 4.5,
+                            reviews: 10
+                        }))
+                    }
+                ]
             },
             {
                 iconName: 'armchair', name: 'Medical Furniture', color: 'bg-purple-500',
                 image: 'https://images.unsplash.com/photo-1631815588090-d4bfec5b1ccb?w=400&h=400&fit=crop',
-                subcategories: createSubcategories(furnitureList, 'https://images.unsplash.com/photo-1631815588090-d4bfec5b1ccb?w=400&h=400&fit=crop')
+                subcategories: [
+                    {
+                        name: 'General',
+                        image: 'https://images.unsplash.com/photo-1631815588090-d4bfec5b1ccb?w=400&h=400&fit=crop',
+                        products: furnitureList.map(item => ({
+                            id: 'fur_' + item.name.replace(/\s+/g, '_').toLowerCase(),
+                            name: item.name,
+                            company: 'Generic',
+                            price: '0',
+                            image: item.image,
+                            description: 'Medical Furniture',
+                            rating: 4.5,
+                            reviews: 10
+                        }))
+                    }
+                ]
             }
         ];
 
@@ -810,14 +836,16 @@
                     }))
                 }));
 
-                // Populate Flash/Trending Products
-                const allProds = categories.flatMap(c => c.subcategories.flatMap(s => s.products));
-                // Prefer discounted items for "Trending", otherwise take random
-                let trending = allProds.filter(p => p.discount || p.originalPrice);
-                if (trending.length < 4) {
-                    const others = allProds.filter(p => !p.discount && !p.originalPrice);
-                    trending = [...trending, ...others].slice(0, 8);
-                }
+                // Populate Flash/Trending Products (5 from each category)
+                let trending = [];
+                categories.forEach(cat => {
+                    const catProds = cat.subcategories.flatMap(s => s.products);
+                    if (catProds.length > 0) {
+                        // Shuffle and take 5
+                        const shuffled = catProds.sort(() => 0.5 - Math.random());
+                        trending.push(...shuffled.slice(0, 5));
+                    }
+                });
                 flashDealProducts = trending;
 
                 console.log("Loaded data from Firestore:", categories.length);
@@ -2559,8 +2587,12 @@
             statusEl.className = "text-[10px] text-blue-500 mt-1 font-bold animate-pulse";
 
             try {
-                const path = `uploads/${Date.now()}_${file.name}`;
-                const url = await handleFileUpload(file, path);
+                // Use a simpler path to avoid any char issues
+                const path = `uploads/${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+                // Direct upload here instead of helper to ensure we catch everything
+                const ref = storage.ref(path);
+                await ref.put(file);
+                const url = await ref.getDownloadURL();
 
                 targetInput.value = url;
                 previewEl.innerHTML = `<img src="${url}" class="w-full h-full object-cover">`;
@@ -2568,10 +2600,10 @@
                 statusEl.innerText = "Upload Complete";
                 statusEl.className = "text-[10px] text-green-500 mt-1 font-bold";
             } catch (e) {
-                console.error(e);
-                statusEl.innerText = "Upload Failed";
+                console.error("Upload Error:", e);
+                statusEl.innerText = "Upload Failed: " + e.message;
                 statusEl.className = "text-[10px] text-red-500 mt-1 font-bold";
-                alert("Upload failed: " + e.message);
+                alert("Upload failed. Check console.");
             }
         }
 
