@@ -1012,19 +1012,18 @@
                 const formData = new FormData();
                 formData.append('file', file);
                 formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-                formData.append('cloud_name', CLOUDINARY_CLOUD_NAME);
-                formData.append('folder', 'glo-med'); // Organize images in folder
 
                 const response = await fetch(CLOUDINARY_UPLOAD_URL, {
                     method: 'POST',
                     body: formData
                 });
 
+                const data = await response.json();
+
                 if (!response.ok) {
-                    throw new Error('Cloudinary upload failed');
+                    throw new Error(data.error?.message || 'Cloudinary upload failed');
                 }
 
-                const data = await response.json();
                 const publicUrl = data.secure_url;
 
                 // If targetId acts as a DOM ID, update it
@@ -1036,7 +1035,8 @@
                 return publicUrl;
 
             } catch (e) {
-                console.error("Upload failed", e);
+                console.error("Upload failed:", e);
+                alert("Upload failed: " + e.message);
                 throw e;
             }
         }
@@ -1149,21 +1149,21 @@
                         const formData = new FormData();
                         formData.append('file', file);
                         formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-                        formData.append('cloud_name', CLOUDINARY_CLOUD_NAME);
-                        formData.append('folder', 'glo-med');
 
                         const response = await fetch(CLOUDINARY_UPLOAD_URL, {
                             method: 'POST',
                             body: formData
                         });
 
+                        const data = await response.json();
+
                         if (!response.ok) {
-                            throw new Error('Upload failed');
+                            throw new Error(data.error?.message || 'Upload failed');
                         }
 
-                        const data = await response.json();
                         updates.image = data.secure_url;
                     } catch (e) {
+                        console.error("Upload Error:", e);
                         alert("Upload Error: " + e.message);
                         saveBtn.innerText = "Save";
                         saveBtn.disabled = false;
@@ -1176,6 +1176,16 @@
                 closeEditModal();
             };
         }
+
+        function closeEditModal() {
+            const modal = document.getElementById('edit-modal');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+        }
+
+        window.openEditModal = openEditModal;
+        window.closeEditModal = closeEditModal;
 
         async function saveItem(mode, type, idOrParentId, updates, existingItem) {
             const saveBtn = document.getElementById('edit-save-btn');
@@ -2113,19 +2123,18 @@
                 const formData = new FormData();
                 formData.append('file', file);
                 formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-                formData.append('cloud_name', CLOUDINARY_CLOUD_NAME);
-                formData.append('folder', 'glo-med/chat'); // Organize chat images
 
                 const response = await fetch(CLOUDINARY_UPLOAD_URL, {
                     method: 'POST',
                     body: formData
                 });
 
+                const data = await response.json();
+
                 if (!response.ok) {
-                    throw new Error('Image upload failed');
+                    throw new Error(data.error?.message || 'Image upload failed');
                 }
 
-                const data = await response.json();
                 const imageUrl = data.secure_url;
 
                 // Send message with image
