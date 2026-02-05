@@ -2102,8 +2102,8 @@
                          <i data-lucide="message-circle" class="w-10 h-10 text-green-500"></i>
                      </div>
                      <h3 class="text-lg font-bold text-gray-900 mb-2">WhatsApp Support</h3>
-                     <p class="text-gray-500 text-sm mb-6">Chat with us instantly, even as a guest!</p>
-                     <button onclick="document.getElementById('edit-modal').classList.remove('hidden'); document.getElementById('edit-modal-title').innerText='Enter Name to Chat'; document.getElementById('edit-modal-content').innerHTML='<input id=\\'guest-name\\' class=\\'w-full border p-2 rounded\\' placeholder=\\'Your Name\\'>'; document.getElementById('edit-save-btn').onclick=startGuestChat;" class="bg-green-500 text-white rounded-full px-8 py-3 font-bold shadow-lg">Start Chat</button>
+                     <p class="text-gray-500 text-sm mb-6">Please log in to access chat support</p>
+                     <button onclick="navigateTo('profile')" class="bg-green-500 text-white rounded-full px-8 py-3 font-bold shadow-lg">Log In</button>
                  </div>`;
                         return;
                     }
@@ -2114,11 +2114,7 @@
                 <div class="bg-white min-h-screen">
                 <div class="bg-white p-4 border-b border-gray-100 flex items-center justify-between sticky top-0 z-10">
                     <h2 class="text-xl font-bold text-green-600">Chats</h2>
-                    ${!isUserAdmin ? `
-                    <button onclick="startNewChat()" class="text-green-600 font-medium text-sm flex items-center gap-1">
-                        <i data-lucide="plus-circle" class="w-5 h-5"></i> New
-                    </button>
-                    ` : ''}
+
                 </div>
 
                 <div class="divide-y divide-gray-100">
