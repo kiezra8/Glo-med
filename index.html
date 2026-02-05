@@ -1605,6 +1605,75 @@
                     lucide.createIcons();
                 }
 
+                window.handleSearch = function (query) {
+                    state.searchQuery = query.toLowerCase().trim();
+
+                    if (!state.searchQuery) {
+                        if (state.page === 'search-results') {
+                            navigateTo('home');
+                        }
+                        return;
+                    }
+
+                    const results = [];
+                    (categories || []).forEach(cat => {
+                        (cat.subcategories || []).forEach(sub => {
+                            (sub.products || []).forEach(p => {
+                                if (p.name.toLowerCase().includes(state.searchQuery) ||
+                                    (p.description && p.description.toLowerCase().includes(state.searchQuery)) ||
+                                    sub.name.toLowerCase().includes(state.searchQuery) ||
+                                    cat.name.toLowerCase().includes(state.searchQuery)) {
+                                    results.push(p);
+                                }
+                            });
+                        });
+                    });
+
+                    state.page = 'search-results';
+                    renderSearchResults(results);
+                };
+
+                function renderSearchResults(results) {
+                    const main = document.getElementById('main-content');
+                    if (!main) return;
+
+                    main.innerHTML = `
+                        <div class="p-4">
+                            <h3 class="font-bold text-gray-900 mb-1">Search Results</h3>
+                            <p class="text-sm text-gray-600 mb-4">${results.length} product${results.length !== 1 ? 's' : ''} found</p>
+                            
+                            ${results.length === 0 ? `
+                                <div class="text-center py-12">
+                                    <i data-lucide="search-x" class="w-16 h-16 text-gray-300 mx-auto mb-3"></i>
+                                    <p class="text-gray-500">No products found</p>
+                                    <p class="text-sm text-gray-400 mt-1">Try different keywords</p>
+                                </div>
+                            ` : `
+                                <div class="grid grid-cols-2 gap-3">
+                                    ${results.map(p => `
+                                        <div class="bg-white rounded-lg overflow-hidden pb-2 group">
+                                            <div class="relative aspect-[4/5] bg-gray-100" onclick="openProductDetail('${p.id}')">
+                                                <img src="${p.image}" alt="${p.name}" class="w-full h-full object-cover">
+                                            </div>
+                                            <div class="mt-2 px-2">
+                                                <h3 class="text-sm text-gray-700 line-clamp-1 mb-0.5">${p.name}</h3>
+                                                <div class="flex items-center justify-between gap-2">
+                                                    <span class="text-base font-bold text-gray-900">${p.price}</span>
+                                                    <button onclick="event.stopPropagation(); addToCart('${p.id}')" class="bg-pharmeasy-teal text-white px-2 py-1 rounded-full text-[10px] font-semibold hover:bg-teal-600 transition-colors whitespace-nowrap">
+                                                        Add to Cart
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            `}
+                        </div>
+                    `;
+
+                    lucide.createIcons();
+                }
+
                 function showToast(message) {
                     let container = document.getElementById('toast-container');
                     if (!container) {
