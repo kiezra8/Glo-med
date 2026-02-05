@@ -1404,17 +1404,75 @@
 
                 function removeFromCart(productId) {
                     state.cart = state.cart.filter(i => i.product.id !== productId);
+                    localStorage.setItem('cart', JSON.stringify(state.cart));
                     updateUI();
                 }
+                window.removeFromCart = removeFromCart;
 
                 function updateQuantity(productId, change) {
                     const item = state.cart.find(i => i.product.id === productId);
                     if (item) {
                         item.quantity += change;
                         if (item.quantity <= 0) removeFromCart(productId);
-                        else updateUI();
+                        else {
+                            localStorage.setItem('cart', JSON.stringify(state.cart));
+                            updateUI();
+                        }
                     }
                 }
+                window.updateQuantity = updateQuantity;
+
+                function openProductDetail(productId) {
+                    const product = getProductById(productId);
+                    if (!product) return;
+
+                    const modal = document.getElementById('product-detail-modal');
+                    const content = document.getElementById('product-detail-content');
+
+                    content.innerHTML = `
+                <div class="space-y-4">
+                    <div class="aspect-square w-full rounded-xl overflow-hidden bg-gray-100">
+                        <img src="${product.image}" alt="${product.name}" class="w-full h-full object-cover">
+                    </div>
+                    
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-900 mb-2">${product.name}</h2>
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="text-3xl font-bold text-pharmeasy-teal">${product.price}</span>
+                            ${product.rating ? `
+                                <div class="flex items-center gap-1 text-yellow-500">
+                                    <i data-lucide="star" class="w-4 h-4 fill-current"></i>
+                                    <span class="text-sm font-semibold text-gray-700">${product.rating}</span>
+                                </div>
+                            ` : ''}
+                        </div>
+                        ${product.company ? `<p class="text-sm text-gray-600 mb-3">By ${product.company}</p>` : ''}
+                    </div>
+
+                    ${product.description ? `
+                        <div class="border-t border-gray-200 pt-4">
+                            <h3 class="font-bold text-gray-900 mb-2">Description</h3>
+                            <p class="text-gray-700 text-sm leading-relaxed">${product.description}</p>
+                        </div>
+                    ` : ''}
+
+                    <button onclick="addToCart('${product.id}'); closeProductDetail();" class="w-full bg-pharmeasy-teal text-white py-3.5 rounded-xl font-bold text-base hover:bg-teal-600 transition-colors shadow-lg sticky bottom-0">
+                        Add to Cart
+                    </button>
+                </div>
+            `;
+
+                    modal.classList.remove('hidden');
+                    lucide.createIcons();
+                }
+
+                function closeProductDetail() {
+                    const modal = document.getElementById('product-detail-modal');
+                    modal.classList.add('hidden');
+                }
+
+                window.openProductDetail = openProductDetail;
+                window.closeProductDetail = closeProductDetail;
 
                 function openCategory(i) { state.selectedCategory = categories[i]; state.page = 'subcategories'; state.selectedSubcategory = null; updateUI(); }
                 function openSubcategory(i) { state.selectedSubcategory = state.selectedCategory.subcategories[i]; state.page = 'products'; updateUI(); }
@@ -1576,7 +1634,7 @@
                         state.cart = [];
                         localStorage.setItem('cart', JSON.stringify(state.cart));
                         showToast('Order placed successfully!');
-                        navigateTo('chat-thread', { chatId: chatId });
+                        navigateTo('chat');
                         console.log('Order created and chat started');
 
                     } catch (err) {
