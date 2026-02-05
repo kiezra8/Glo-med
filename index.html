@@ -1384,6 +1384,10 @@
                     } else {
                         state.cart.push({ product, quantity: 1 });
                     }
+
+                    // Save to localStorage
+                    localStorage.setItem('cart', JSON.stringify(state.cart));
+
                     // Show toast or feedback
                     const btn = document.activeElement;
                     if (btn && btn.tagName === 'BUTTON') {
@@ -2502,6 +2506,63 @@
                     } else {
                         console.error("No selected category or subcategories found");
                     }
+                }
+
+                function renderCart() {
+                    const container = document.getElementById('main-content');
+                    const total = state.cart.reduce((sum, item) => {
+                        const price = parseFloat(item.product.price.replace(/[^0-9.]/g, '')) || 0;
+                        return sum + (price * item.quantity);
+                    }, 0);
+
+                    container.innerHTML = `
+                        <div class="flex flex-col h-full bg-gray-50">
+                            ${state.cart.length > 0 ? `
+                                <div class="flex-1 overflow-y-auto p-4 space-y-3 pb-32">
+                                    ${state.cart.map(item => `
+                                        <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex gap-3">
+                                            <img src="${item.product.image}" class="w-20 h-20 rounded-lg object-cover">
+                                            <div class="flex-1">
+                                                <h3 class="font-bold text-gray-900 text-sm mb-1">${item.product.name}</h3>
+                                                <p class="text-pharmeasy-teal font-bold text-base">${item.product.price}</p>
+                                                <div class="flex items-center gap-3 mt-2">
+                                                    <button onclick="updateQuantity('${item.product.id}', -1)" class="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-gray-700 hover:bg-gray-200">
+                                                        <i data-lucide="minus" class="w-4 h-4"></i>
+                                                    </button>
+                                                    <span class="font-semibold text-gray-900 w-8 text-center">${item.quantity}</span>
+                                                    <button onclick="updateQuantity('${item.product.id}', 1)" class="w-7 h-7 rounded-full bg-pharmeasy-teal flex items-center justify-center text-white hover:bg-teal-600">
+                                                        <i data-lucide="plus" class="w-4 h-4"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <button onclick="removeFromCart('${item.product.id}')" class="text-red-500 hover:bg-red-50 p-2 rounded-lg h-fit">
+                                                <i data-lucide="trash-2" class="w-5 h-5"></i>
+                                            </button>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                                <div class="fixed bottom-16 left-0 right-0 max-w-md mx-auto p-4 bg-white border-t border-gray-200 shadow-lg">
+                                    <div class="flex items-center justify-between mb-4">
+                                        <span class="text-lg font-bold text-gray-900">Total</span>
+                                        <span class="text-2xl font-bold text-pharmeasy-teal">UGX ${total.toLocaleString()}</span>
+                                    </div>
+                                    <button onclick="createOrder()" class="w-full bg-pharmeasy-teal text-white py-3.5 rounded-xl font-bold text-base hover:bg-teal-600 transition-colors shadow-lg">
+                                        Place Order
+                                    </button>
+                                </div>
+                            ` : `
+                                <div class="flex flex-col items-center justify-center h-full py-20">
+                                    <i data-lucide="shopping-cart" class="w-24 h-24 text-gray-300 mb-4"></i>
+                                    <h3 class="text-xl font-bold text-gray-900 mb-2">Your cart is empty</h3>
+                                    <p class="text-gray-500 mb-6">Add some products to get started</p>
+                                    <button onclick="navigateTo('home')" class="bg-pharmeasy-teal text-white px-6 py-3 rounded-xl font-semibold hover:bg-teal-600 transition-colors">
+                                        Browse Products
+                                    </button>
+                                </div>
+                            `}
+                        </div>
+                    `;
+                    lucide.createIcons();
                 }
 
                 function renderProfile() {
