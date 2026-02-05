@@ -508,10 +508,14 @@
             {
                 iconName: 'package', name: 'Consumables', color: 'bg-orange-500',
                 image: 'https://iororwxhmiiqlq5p.leadongcdn.com/cloud/pnBplKplRllSqirjnqlrj/weixintupian_20250526144752.png',
+                subcategories: createSubcategories(consumableList, 'https://images.unsplash.com/photo-1584473457409-ae5c91d7a8cc?w=400&h=400&fit=crop')
+            },
+            {
+                iconName: 'activity', name: 'Medical Equipment', color: 'bg-green-500',
+                image: 'https://images.unsplash.com/photo-1615486511484-92e172cc4fe0?w=400&h=400&fit=crop',
                 subcategories: [
-                    ...createSubcategories(consumableList, 'https://images.unsplash.com/photo-1584473457409-ae5c91d7a8cc?w=400&h=400&fit=crop'),
                     {
-                        name: 'Medical Equipment',
+                        name: 'General Equipment',
                         image: 'https://images.unsplash.com/photo-1615486511484-92e172cc4fe0?w=400&h=400&fit=crop',
                         products: equipmentList.map(item => ({
                             id: 'eq_' + item.name.replace(/\s+/g, '_').toLowerCase(),
@@ -755,8 +759,127 @@
         // Expose to window for easy admin access
         window.clearAllProducts = clearAllProducts;
 
+        // Admin Utility: Rename Laboratory Equipment to Medical Equipment in Firestore
+        async function fixCategoryName() {
+            try {
+                const snapshot = await db.collection('subcategories')
+                    .where('name', '==', 'Laboratory Equipment')
+                    .get();
+
+                if (snapshot.empty) {
+                    alert('No "Laboratory Equipment" found in database.');
+                    return;
+                }
+
+                const batch = db.batch();
+                snapshot.docs.forEach(doc => {
+                    batch.update(doc.ref, { name: 'Medical Equipment' });
+                });
+
+                await batch.commit();
+                alert('Successfully renamed "Laboratory Equipment" to "Medical Equipment"!');
+                loadData();
+            } catch (e) {
+                console.error('Error renaming category:', e);
+                alert('Error: ' + e.message);
+            }
+        }
+
+        window.fixCategoryName = fixCategoryName;
+
+        // Admin Utility: Complete Database Cleanup and Reseed
+        async function cleanupAndReseedDatabase() {
+            if (!confirm('⚠️ WARNING: This will DELETE all categories, subcategories, and products, then reseed with clean defaults.\n\nThis cannot be undone. Continue?')) {
+                return;
+            }
+
+            try {
+                showToast('Step 1/4: Clearing old data...');
+
+                // Step 1: Delete all existing data
+                const collections = ['products', 'subcategories', 'categories'];
+                for (const collectionName of collections) {
+                    const snapshot = await db.collection(collectionName).get();
+                    const batch = db.batch();
+                    snapshot.docs.forEach(doc => batch.delete(doc.ref));
+                    if (snapshot.docs.length > 0) {
+                        await batch.commit();
+                        console.log(`Deleted ${snapshot.docs.length} ${collectionName}`);
+                    }
+                }
+
+                showToast('Step 2/4: Creating categories...');
+
+                // Step 2: Create categories
+                const categoryMap = new Map(); // name -> id
+                for (const cat of defaultCategories) {
+                    const catRef = db.collection('categories').doc();
+                    await catRef.set({
+                        name: cat.name,
+                        image: cat.image,
+                        color: cat.color,
+                        icon_name: cat.iconName
+                    });
+                    categoryMap.set(cat.name, { id: catRef.id, subcategories: cat.subcategories });
+                    console.log(`Created category: ${cat.name}`);
+                }
+
+                showToast('Step 3/4: Creating subcategories...');
+
+                // Step 3: Create subcategories
+                let subCount = 0;
+                for (const [catName, catData] of categoryMap) {
+                    for (const sub of catData.subcategories) {
+                        const subRef = db.collection('subcategories').doc();
+                        await subRef.set({
+                            name: sub.name,
+                            image: sub.image,
+                            category_id: catData.id
+                        });
+                        subCount++;
+
+                        // If subcategory has pre-defined products (like equipment), create them
+                        if (sub.products && sub.products.length > 0) {
+                            for (const prod of sub.products) {
+                                await db.collection('products').add({
+                                    name: prod.name,
+                                    company: prod.company || 'Generic',
+                                    price: prod.price || '0',
+                                    image: prod.image,
+                                    description: prod.description || '',
+                                    rating: prod.rating || 4.5,
+                                    reviews: prod.reviews || 10,
+                                    subcategory_id: subRef.id,
+                                    category_id: catData.id
+                                });
+                            }
+                        }
+                    }
+                }
+
+                showToast('Step 4/4: Finalizing...');
+                console.log(`Created ${subCount} subcategories`);
+
+                alert(`✅ Database cleaned and reseeded successfully!\n\n- ${categoryMap.size} categories (Drugs, Consumables, Medical Equipment, Medical Furniture)\n- ${subCount} subcategories\n- Equipment and Furniture products added`);
+
+                // Reload data
+                await loadData();
+
+            } catch (err) {
+                console.error('Cleanup Error:', err);
+                alert('❌ Error during cleanup: ' + err.message);
+            }
+        }
+
+        window.cleanupAndReseedDatabase = cleanupAndReseedDatabase;
+
+
 
         async function loadData() {
+            // Show default categories immediately for instant display
+            categories = [...defaultCategories];
+            updateUI();
+
             try {
                 // Fetch Categories
                 const catSnap = await db.collection('categories').get();
@@ -853,7 +976,8 @@
 
             } catch (e) {
                 console.error("Load Data Error", e);
-                populateProducts();
+                // Keep defaults on error
+                categories = [...defaultCategories];
                 updateUI();
             }
         }
@@ -1004,8 +1128,10 @@
                     saveBtn.disabled = true;
                     try {
                         const file = fileInput.files[0];
-                        const path = `uploads/${Date.now()}_${file.name}`;
-                        const url = await handleFileUpload(file, path);
+                        const fileName = `uploads/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+                        const ref = storage.ref(fileName);
+                        await ref.put(file);
+                        const url = await ref.getDownloadURL();
                         updates.image = url; // Override URL
                     } catch (e) {
                         alert("Upload Error: " + e.message);
@@ -2187,20 +2313,26 @@
                     </div>
 
                     ${currentUser.role === 'admin' ? `
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
-                        <h3 class="font-bold text-gray-900 mb-3">Admin Actions</h3>
-                        <button onclick="seedDatabase()" class="w-full text-left p-3 rounded-lg hover:bg-gray-50 flex items-center gap-3 transition-colors">
-                             <i data-lucide="database" class="w-5 h-5 text-pharmeasy-teal"></i>
-                             <span class="text-sm font-medium text-gray-700">Seed Database</span>
-                        </button>
-                        <button onclick="clearAllProducts()" class="w-full text-left p-3 rounded-lg hover:bg-red-50 flex items-center gap-3 transition-colors text-red-600 mt-2">
-                             <i data-lucide="trash-2" class="w-5 h-5"></i>
-                             <span class="text-sm font-medium">Clear All Products</span>
-                        </button>
-                    </div>
-                    ` : ''
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
+                <h3 class="font-bold text-gray-900 mb-3">Admin Actions</h3>
+                <button onclick="cleanupAndReseedDatabase()" class="w-full text-left p-3 rounded-lg hover:bg-green-50 flex items-center gap-3 transition-colors border-2 border-green-500 mb-2">
+                     <i data-lucide="refresh-cw" class="w-5 h-5 text-green-600"></i>
+                     <div class="flex-1">
+                         <span class="text-sm font-bold text-green-700 block">Clean & Reseed Database</span>
+                         <span class="text-xs text-green-600">Reset to 4 clean categories</span>
+                     </div>
+                </button>
+                <button onclick="seedDatabase()" class="w-full text-left p-3 rounded-lg hover:bg-gray-50 flex items-center gap-3 transition-colors">
+                     <i data-lucide="database" class="w-5 h-5 text-pharmeasy-teal"></i>
+                     <span class="text-sm font-medium text-gray-700">Seed Database</span>
+                </button>
+                <button onclick="clearAllProducts()" class="w-full text-left p-3 rounded-lg hover:bg-red-50 flex items-center gap-3 transition-colors text-red-600 mt-2">
+                     <i data-lucide="trash-2" class="w-5 h-5"></i>
+                     <span class="text-sm font-medium">Clear All Products</span>
+                </button>
+            </div>
+            ` : ''
                     }
-
             <button onclick="logout()" class="w-full pharmeasy-btn bg-red-500 hover:bg-red-600 text-white">Log Out</button>
                 </div> `;
             } else {
