@@ -499,7 +499,7 @@
             };
         });
 
-        let categories = [
+        const defaultCategories = [
             {
                 iconName: 'pill', name: 'Drugs', color: 'bg-blue-500',
                 image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400&h=400&fit=crop',
@@ -521,6 +521,9 @@
                 subcategories: createSubcategories(furnitureList, 'https://images.unsplash.com/photo-1631815588090-d4bfec5b1ccb?w=400&h=400&fit=crop')
             }
         ];
+
+        // Initialize dynamic categories with defaults
+        let categories = [...defaultCategories];
 
         const heroSlides = [
             {
@@ -733,10 +736,24 @@
                 const catSnap = await db.collection('categories').get();
                 const cats = catSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
+                // Fetch News
+                const newsSnap = await db.collection('news').orderBy('timestamp', 'desc').get();
+                if (!newsSnap.empty) {
+                    const dbNews = newsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    // Merge: DB news first (newest), then defaults if you want, or just replace.
+                    // User likely wants mixed or just DB. Let's keep defaults at bottom if they aren't in DB.
+                    // Simple approach: Use DB news if exists, else defaults. 
+                    // Better: Append defaults that aren't in DB? 
+                    // Given previous pattern:
+                    newsPosts = dbNews;
+                    // If we want defaults to persist, we should have seeded them. 
+                    // But for now, let's trust the DB. If DB has news, show DB news.
+                }
+
                 if (cats.length === 0) {
-                    console.log("No categories in DB, using hardcoded");
-                    populateProducts(); // This populates local state. We should also seed DB if needed.
-                    // Automatically seed if empty to ensure data exists
+                    console.log("No categories in DB, using defaults");
+                    // populateProducts(); // REMOVED: Don't generate fake products
+                    // Automatically seed defaults if empty
                     seedDatabase();
                     updateUI();
                     return;
@@ -760,8 +777,12 @@
                 }
 
                 // Rebuild tree
-                // Deduplicate Categories by Name (prefer Firestore ones)
+                // Deduplicate Categories by Name (prefer Firestore ones but start with defaults)
                 const uniqueCats = new Map();
+                // 1. Load Defaults First
+                defaultCategories.forEach(c => uniqueCats.set(c.name, { ...c }));
+
+                // 2. Overlay Firestore Data
                 cats.forEach(c => uniqueCats.set(c.name, c)); // Last one wins (usually FireStore)
 
                 categories = Array.from(uniqueCats.values()).map(c => ({
@@ -2445,7 +2466,7 @@
                 const existingCats = new Map(); // Name -> ID
                 existingCatsSnap.forEach(doc => existingCats.set(doc.data().name, doc.id));
 
-                for (const cat of categories) {
+                for (const cat of defaultCategories) {
                     let catId = existingCats.get(cat.name);
 
                     // Create Category if missing
@@ -2507,6 +2528,53 @@
             }
         }
 
+        // --- Admin Image Upload Helper ---
+        function renderImageUpload(currentUrl, inputId = 'edit-image') {
+            return `
+                <div class="mb-3">
+                    <label class="block text-xs font-bold text-gray-700 mb-2">Product Image</label>
+                    <div class="flex items-center gap-4">
+                        <div id="${inputId}-preview" class="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden border border-gray-200">
+                            ${currentUrl ? `<img src="${currentUrl}" class="w-full h-full object-cover">` : `<i data-lucide="image" class="w-6 h-6 text-gray-400"></i>`}
+                        </div>
+                        <div class="flex-1">
+                            <input type="hidden" id="${inputId}" value="${currentUrl || ''}">
+                            <input type="file" accept="image/*" onchange="handleAdminImageUpload(this, '${inputId}')" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-pharmeasy-teal/10 file:text-pharmeasy-teal hover:file:bg-pharmeasy-teal/20 mx-auto"/>
+                            <p id="${inputId}-status" class="text-[10px] text-gray-400 mt-1">PNG, JPG up to 5MB</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function handleAdminImageUpload(input, targetId) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const statusEl = document.getElementById(targetId + '-status');
+            const previewEl = document.getElementById(targetId + '-preview');
+            const targetInput = document.getElementById(targetId);
+
+            statusEl.innerText = "Uploading...";
+            statusEl.className = "text-[10px] text-blue-500 mt-1 font-bold animate-pulse";
+
+            try {
+                const path = `uploads/${Date.now()}_${file.name}`;
+                const url = await handleFileUpload(file, path);
+
+                targetInput.value = url;
+                previewEl.innerHTML = `<img src="${url}" class="w-full h-full object-cover">`;
+
+                statusEl.innerText = "Upload Complete";
+                statusEl.className = "text-[10px] text-green-500 mt-1 font-bold";
+            } catch (e) {
+                console.error(e);
+                statusEl.innerText = "Upload Failed";
+                statusEl.className = "text-[10px] text-red-500 mt-1 font-bold";
+                alert("Upload failed: " + e.message);
+            }
+        }
+
         // --- Admin CRUD Logic ---
         window.openEditModal = function (mode, type, id) {
             const modal = document.getElementById('edit-modal');
@@ -2548,26 +2616,26 @@
             if (type === 'category') {
                 html = `
                      <input id="edit-name" class="w-full border p-2 rounded" placeholder="Category Name" value="${currentItem ? currentItem.name : ''}">
-                     <input id="edit-image" class="w-full border p-2 rounded" placeholder="Image URL" value="${currentItem ? currentItem.image : ''}">
+                     ${renderImageUpload(currentItem ? currentItem.image : '')}
                  `;
             } else if (type === 'subcategory') {
                 html = `
                      <input id="edit-name" class="w-full border p-2 rounded" placeholder="Collection Name" value="${currentItem ? currentItem.name : ''}">
-                     <input id="edit-image" class="w-full border p-2 rounded" placeholder="Image URL" value="${currentItem ? currentItem.image : ''}">
+                     ${renderImageUpload(currentItem ? currentItem.image : '')}
                  `;
             } else if (type === 'product') {
                 html = `
                      <input id="edit-name" class="w-full border p-2 rounded" placeholder="Product Name" value="${currentItem ? currentItem.name : ''}">
                      <input id="edit-company" class="w-full border p-2 rounded" placeholder="Company" value="${currentItem ? currentItem.company : ''}">
                      <input id="edit-price" class="w-full border p-2 rounded" placeholder="Price (e.g. UGX 5,000)" value="${currentItem ? currentItem.price : ''}">
-                     <input id="edit-image" class="w-full border p-2 rounded" placeholder="Image URL" value="${currentItem ? currentItem.image : ''}">
+                     ${renderImageUpload(currentItem ? currentItem.image : '')}
                      <textarea id="edit-desc" class="w-full border p-2 rounded" placeholder="Description">${currentItem && currentItem.description ? currentItem.description : ''}</textarea>
                  `;
             } else if (type === 'news') {
                 html = `
                      <input id="edit-title" class="w-full border p-2 rounded" placeholder="Title" value="${currentItem ? currentItem.title : ''}">
                      <textarea id="edit-desc" class="w-full border p-2 rounded" placeholder="Description">${currentItem ? currentItem.description : ''}</textarea>
-                     <input id="edit-image" class="w-full border p-2 rounded" placeholder="Image URL" value="${currentItem ? currentItem.image : ''}">
+                     ${renderImageUpload(currentItem ? currentItem.image : '')}
                  `;
             }
 
@@ -2623,7 +2691,8 @@
                         description: document.getElementById('edit-desc').value,
                         image: imageVal,
                         type: 'image',
-                        timestamp: new Date().toISOString()
+                        timestamp: new Date().toISOString(),
+                        time: new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                     };
                 }
 
