@@ -1515,9 +1515,16 @@
                     try {
                         // 1. Create Order using Firestore
                         await db.collection('orders').add({
-                            items: state.cart,
-                            user_email: currentUser.email,
-                            user_id: currentUser.uid,
+                            items: state.cart.map(item => ({
+                                id: item.product.id || '',
+                                name: item.product.name || '',
+                                price: item.product.price || '',
+                                quantity: item.quantity || 1,
+                                image: item.product.image || ''
+                            })),
+                            user_email: currentUser.email || '',
+                            user_id: currentUser.uid || '',
+                            user_name: currentUser.name || currentUser.email || 'User',
                             status: 'pending',
                             created_at: new Date().toISOString()
                         });
@@ -1533,23 +1540,24 @@
                             chatId = chatQuery.docs[0].id;
                         } else {
                             const newChatRef = await db.collection('chats').add({
-                                user_id: currentUser.uid,
-                                user_name: currentUser.name,
-                                admin_ids: adminEmails,
+                                user_id: currentUser.uid || '',
+                                user_name: currentUser.name || currentUser.email || 'User',
+                                admin_ids: adminEmails || [],
                                 last_message: 'Order Request placed',
                                 last_message_time: new Date().toISOString(),
                                 unread_admin: 1,
-                                unread_client: 0
+                                unread_client: 0,
+                                created_at: new Date().toISOString()
                             });
                             chatId = newChatRef.id;
                         }
 
                         // 3. Send Message
                         await db.collection('messages').add({
-                            chat_id: chatId,
-                            text: orderText,
-                            sender_id: currentUser.uid,
-                            sender_name: currentUser.name,
+                            chat_id: chatId || '',
+                            text: orderText || '',
+                            sender_id: currentUser.uid || '',
+                            sender_name: currentUser.name || currentUser.email || 'User',
                             timestamp: new Date().toISOString(),
                             type: 'order'
                         });
@@ -1561,8 +1569,9 @@
                             unread_admin: firebase.firestore.FieldValue.increment(1)
                         });
 
-
                         state.cart = [];
+                        localStorage.setItem('cart', JSON.stringify(state.cart));
+                        showToast('Order placed successfully!');
                         navigateTo('chat-thread', { chatId: chatId });
                         console.log('Order created and chat started');
 
