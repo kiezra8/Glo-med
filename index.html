@@ -1205,6 +1205,9 @@
                         data.color = 'bg-blue-500';
                         data.icon_name = 'package';
                     }
+                    if (type === 'news') {
+                        data.timestamp = new Date().toISOString();
+                    }
 
                     await db.collection(collection).add(data);
                 } else {
@@ -1239,7 +1242,9 @@
         async function deleteItem(type, id) {
             if (!confirm("Are you sure you want to delete this item?")) return;
 
-            const collection = type === 'category' ? 'categories' : (type === 'subcategory' ? 'subcategories' : 'products');
+            const collection = type === 'category' ? 'categories' :
+                type === 'subcategory' ? 'subcategories' :
+                    type === 'news' ? 'news' : 'products';
 
             try {
                 // 1. Get the item first to find its image
@@ -1252,8 +1257,8 @@
 
                 const data = doc.data();
 
-                // 2. Delete the image if it exists
-                if (data.image) {
+                // 2. Delete the image if it exists (skip for Cloudinary URLs)
+                if (data.image && data.image.includes('firebase')) {
                     await deleteImage(data.image);
                 }
 
@@ -1267,6 +1272,8 @@
                 alert("Error deleting: " + e.message);
             }
         }
+
+        window.deleteItem = deleteItem;
 
         function getProductById(id) {
             for (let c of categories) {
