@@ -1577,23 +1577,19 @@
                     const header = document.getElementById('header');
                     if (!header) return;
 
-                    // Don't show search bar on some pages or just keep it simple
-                    const showSearch = state.page === 'home' || state.page === 'search-results';
-
                     header.innerHTML = `
             <div class="flex items-center gap-3 px-4 py-3 bg-white w-full">
                ${state.page !== 'home' ? `<button onclick="goBack()" class="p-2 -ml-2 text-black"><i data-lucide="chevron-left" class="w-6 h-6"></i></button>` : `<div class="font-bold text-xl tracking-tight text-pharmeasy-teal">Glo-Med</div>`}
                
-               ${showSearch ? `
-                <div class="flex-1 relative">
-                     <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
-                     <input type="text" 
-                            value="${state.searchQuery}"
-                            oninput="handleSearch(this.value)"
-                            placeholder="Search..." 
-                            class="w-full bg-gray-50 border-none rounded-full py-2.5 pl-9 pr-4 text-sm focus:ring-1 focus:ring-pharmeasy-teal transition-all placeholder:text-gray-400">
-                </div>
-               ` : '<div class="flex-1"></div>'}
+               <div class="flex-1 max-w-md mx-2 relative">
+                    <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+                    <input type="text" 
+                           id="search-input"
+                           value="${state.searchQuery || ''}"
+                           oninput="handleSearch(this.value)"
+                           placeholder="Search products..." 
+                           class="w-full bg-gray-50 border-none rounded-full py-2 pl-9 pr-4 text-sm focus:ring-1 focus:ring-pharmeasy-teal transition-all placeholder:text-gray-400">
+               </div>
 
                <div class="flex items-center gap-1">
                    <button onclick="navigateTo('cart')" class="p-2 text-black hover:bg-gray-100 rounded-full relative" aria-label="Cart">
@@ -1605,9 +1601,9 @@
                     </button>
                </div>
             </div>`;
+
+                    lucide.createIcons();
                 }
-
-
 
                 function showToast(message) {
                     let container = document.getElementById('toast-container');
@@ -1744,8 +1740,8 @@
                                 <h3 class="text-sm text-gray-700 line-clamp-1 mb-0.5">${p.name}</h3>
                                 <div class="flex items-center justify-between gap-2">
                                     <span class="text-base font-bold text-gray-900">${p.price}</span>
-                                    <button onclick="event.stopPropagation(); addToCart('${p.id}')" class="bg-pharmeasy-teal text-white px-3 py-1 rounded-full text-xs font-semibold hover:bg-teal-600 transition-colors">
-                                        Add
+                                    <button onclick="event.stopPropagation(); addToCart('${p.id}')" class="bg-pharmeasy-teal text-white px-2 py-1 rounded-full text-[10px] font-semibold hover:bg-teal-600 transition-colors whitespace-nowrap">
+                                        Add to Cart
                                     </button>
                                 </div>
                             </div>
@@ -1856,8 +1852,8 @@
                             <h3 class="text-sm text-gray-700 line-clamp-1 mb-0.5">${p.name}</h3>
                             <div class="flex items-center justify-between gap-2">
                                 <span class="text-base font-bold text-gray-900">${p.price}</span>
-                                <button onclick="event.stopPropagation(); addToCart('${p.id}')" class="bg-pharmeasy-teal text-white px-3 py-1 rounded-full text-xs font-semibold hover:bg-teal-600 transition-colors">
-                                    Add
+                                <button onclick="event.stopPropagation(); addToCart('${p.id}')" class="bg-pharmeasy-teal text-white px-2 py-1 rounded-full text-[10px] font-semibold hover:bg-teal-600 transition-colors whitespace-nowrap">
+                                    Add to Cart
                                 </button>
                             </div>
                         </div>
@@ -2012,53 +2008,6 @@
                     const name = document.getElementById('guest-name').value;
                     if (!name) return;
                     // Mock a user for session
-                    currentUser = { uid: 'guest-' + Date.now(), name: name, role: 'user', email: 'guest@glo.med' };
-                    closeEditModal();
-                    startNewChat();
-                }
-
-                async function startNewChat() {
-                    // Logic to start chat 
-                    if (!currentUser) return;
-
-                    try {
-                        // Check existing
-                        const existingChatsSnap = await db.collection('chats')
-                            .where('user_id', '==', currentUser.uid)
-                            .limit(1)
-                            .get();
-
-                        if (!existingChatsSnap.empty) {
-                            navigateTo('chat-thread', { chatId: existingChatsSnap.docs[0].id });
-                            return;
-                        }
-
-                        // Create new
-                        const docRef = await db.collection('chats').add({
-                            user_id: currentUser.uid,
-                            user_name: currentUser.name,
-                            admin_ids: adminEmails,
-                            last_message: 'Chat started',
-                            last_message_time: new Date().toISOString(),
-                            unread_admin: 1,
-                            unread_client: 0,
-                            created_at: new Date().toISOString()
-                        });
-
-                        navigateTo('chat-thread', { chatId: docRef.id });
-                    } catch (error) {
-                        console.error("Start Chat Error", error);
-                        alert("Failed to start chat");
-                    }
-                }
-
-
-                let currentMessages = [];
-
-                function renderChatThread() {
-                    const chatId = state.activeChat;
-                    if (!chatId) return;
-                    const isUserAdmin = currentUser ? currentUser.role === 'admin' : false;
 
                     // Subscribe logic reused...
                     if (messagesUnsubscribe) { messagesUnsubscribe(); messagesUnsubscribe = null; }
