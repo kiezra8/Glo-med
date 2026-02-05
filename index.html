@@ -1552,8 +1552,8 @@
             const safeCategories = categories || [];
             const safeHeroSlides = heroSlides || [];
 
-            // Safety check for flash deals product
-            const flashDealProducts = safeCategories[0]?.subcategories?.[0]?.products || [];
+            // Use global flashDealProducts populated in loadData (30 products from all categories)
+            const safeTrendingProducts = flashDealProducts || [];
 
             document.getElementById('main-content').innerHTML = `
             <div class="p-4 space-y-5">
@@ -1645,7 +1645,7 @@
                         <button class="text-pharmeasy-teal text-sm font-semibold">See All</button>
                     </div>
                     <div class="grid grid-cols-2 gap-3">
-                        ${flashDealProducts.slice(0, 4).map(p => `
+                        ${safeTrendingProducts.slice(0, 4).map(p => `
                         <div class="bg-white rounded-lg overflow-hidden pb-2 group" onclick="addToCart('${p.id}')">
                             <div class="relative aspect-[4/5] bg-gray-100">
                                 <img src="${p.image}" alt="${p.name}" class="w-full h-full object-cover">
