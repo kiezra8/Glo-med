@@ -29,6 +29,12 @@
         const auth = firebase.auth();
         const storage = firebase.storage();
 
+        // Cloudinary Configuration
+        const CLOUDINARY_CLOUD_NAME = 'dvfuk2fzp';
+        const CLOUDINARY_UPLOAD_PRESET = 'Glo-Med';
+        const CLOUDINARY_UPLOAD_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`;
+
+
         // Helper to mimic Supabase-like syntax for easier refactoring
         window.db = db;
         window.auth = auth;
@@ -1002,14 +1008,24 @@
             }
 
             try {
-                const fileName = `uploads/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-                const ref = storage.ref(fileName);
+                // Upload to Cloudinary instead of Firebase Storage
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+                formData.append('cloud_name', CLOUDINARY_CLOUD_NAME);
+                formData.append('folder', 'glo-med'); // Organize images in folder
 
-                // Upload
-                await ref.put(file);
+                const response = await fetch(CLOUDINARY_UPLOAD_URL, {
+                    method: 'POST',
+                    body: formData
+                });
 
-                // Get URL
-                const publicUrl = await ref.getDownloadURL();
+                if (!response.ok) {
+                    throw new Error('Cloudinary upload failed');
+                }
+
+                const data = await response.json();
+                const publicUrl = data.secure_url;
 
                 // If targetId acts as a DOM ID, update it
                 if (typeof targetId === 'string' && document.getElementById(targetId)) {
@@ -1128,11 +1144,25 @@
                     saveBtn.disabled = true;
                     try {
                         const file = fileInput.files[0];
-                        const fileName = `uploads/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-                        const ref = storage.ref(fileName);
-                        await ref.put(file);
-                        const url = await ref.getDownloadURL();
-                        updates.image = url; // Override URL
+
+                        // Upload to Cloudinary
+                        const formData = new FormData();
+                        formData.append('file', file);
+                        formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+                        formData.append('cloud_name', CLOUDINARY_CLOUD_NAME);
+                        formData.append('folder', 'glo-med');
+
+                        const response = await fetch(CLOUDINARY_UPLOAD_URL, {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        if (!response.ok) {
+                            throw new Error('Upload failed');
+                        }
+
+                        const data = await response.json();
+                        updates.image = data.secure_url;
                     } catch (e) {
                         alert("Upload Error: " + e.message);
                         saveBtn.innerText = "Save";
@@ -2068,6 +2098,64 @@
             container.scrollTop = container.scrollHeight;
             lucide.createIcons();
         }
+
+        async function handleChatImageSelect(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const chatId = state.activeChat;
+            if (!chatId) return;
+
+            try {
+                showToast("Uploading image...");
+
+                // Upload to Cloudinary
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+                formData.append('cloud_name', CLOUDINARY_CLOUD_NAME);
+                formData.append('folder', 'glo-med/chat'); // Organize chat images
+
+                const response = await fetch(CLOUDINARY_UPLOAD_URL, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error('Image upload failed');
+                }
+
+                const data = await response.json();
+                const imageUrl = data.secure_url;
+
+                // Send message with image
+                await db.collection('messages').add({
+                    chat_id: chatId,
+                    text: '',
+                    type: 'image',
+                    image: imageUrl,
+                    sender_id: currentUser.uid,
+                    sender_name: currentUser.name,
+                    timestamp: new Date().toISOString()
+                });
+
+                // Update chat metadata
+                const isUserAdmin = currentUser.role === 'admin';
+                await db.collection('chats').doc(chatId).update({
+                    last_message: '📷 Image',
+                    last_message_time: new Date().toISOString(),
+                    unread_admin: isUserAdmin ? 0 : 1,
+                    unread_client: isUserAdmin ? 1 : 0
+                });
+
+                input.value = ''; // Clear input
+                showToast("Image sent!");
+            } catch (e) {
+                console.error("Image upload error:", e);
+                alert("Failed to send image: " + e.message);
+            }
+        }
+
 
         async function sendMessage() {
             const input = document.getElementById('message-input');
