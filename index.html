@@ -36,9 +36,9 @@
 
 
         // Helper to mimic Supabase-like syntax for easier refactoring
-        window.db = db;
         window.auth = auth;
         window.storage = storage;
+        window.productMap = new Map(); // Global product registry O(1)
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -967,9 +967,14 @@
 
                         // Populate Trending Products (30 total from all categories)
                         let allProducts = [];
+                        window.productMap.clear(); // Clear registry
+
                         categories.forEach(cat => {
                             cat.subcategories.forEach(sub => {
-                                allProducts.push(...sub.products);
+                                sub.products.forEach(p => {
+                                    allProducts.push(p);
+                                    window.productMap.set(String(p.id), p); // Store as string for safe lookup
+                                });
                             });
                         });
 
@@ -978,6 +983,7 @@
                         flashDealProducts = shuffled.slice(0, 30);
 
                         console.log("Loaded data from Firestore:", categories.length);
+                        console.log("Product Map Size:", window.productMap.size);
                         updateUI();
 
                     } catch (e) {
@@ -1298,20 +1304,18 @@
                 window.deleteItem = deleteItem;
 
                 function getProductById(id) {
-                    for (let c of categories) {
-                        for (let s of c.subcategories) {
-                            const p = s.products.find(p => p.id === id);
-                            if (p) return p;
-                        }
-                    }
-                    return null;
+                    if (!window.productMap) return null;
+                    return window.productMap.get(String(id)) || null;
                 }
 
                 function addToCart(productId) {
                     const product = getProductById(productId);
-                    if (!product) return;
+                    if (!product) {
+                        showToast("Error: Product not found");
+                        return;
+                    }
 
-                    const existing = state.cart.find(i => i.product.id === productId);
+                    const existing = state.cart.find(i => i.product.id == productId); // Loose equality here too
                     if (existing) {
                         existing.quantity++;
                     } else {
@@ -1321,29 +1325,19 @@
                     // Save to localStorage
                     localStorage.setItem('cart', JSON.stringify(state.cart));
 
-                    // Show toast or feedback
-                    const btn = document.activeElement;
-                    if (btn && btn.tagName === 'BUTTON') {
-                        const originalText = btn.innerText;
-                        btn.innerText = 'Added!';
-                        btn.classList.add('bg-green-600');
-                        setTimeout(() => {
-                            btn.innerText = originalText;
-                            btn.classList.remove('bg-green-600');
-                        }, 1000);
-                    }
+                    showToast("Added to Cart");
                     updateUI();
                 }
 
                 function removeFromCart(productId) {
-                    state.cart = state.cart.filter(i => i.product.id !== productId);
+                    state.cart = state.cart.filter(i => i.product.id != productId);
                     localStorage.setItem('cart', JSON.stringify(state.cart));
                     updateUI();
                 }
                 window.removeFromCart = removeFromCart;
 
                 function updateQuantity(productId, change) {
-                    const item = state.cart.find(i => i.product.id === productId);
+                    const item = state.cart.find(i => i.product.id == productId);
                     if (item) {
                         item.quantity += change;
                         if (item.quantity <= 0) removeFromCart(productId);
@@ -1356,12 +1350,24 @@
                 window.updateQuantity = updateQuantity;
 
                 function openProductDetail(productId) {
+                    console.log("Opening details for:", productId);
                     const product = getProductById(productId);
-                    if (!product) return;
+
+                    if (!product) {
+                        console.error("Product details failed for ID:", productId);
+                        // Fallback alert for debugging if needed, but toast is better
+                        showToast("Unable to load product details");
+                        return;
+                    }
 
                     const modal = document.getElementById('product-detail-modal');
                     const content = document.getElementById('product-detail-content');
+                    const addBtn = document.getElementById('product-detail-add-cart'); // Get button ref specifically to update functionality
 
+                    const title = document.getElementById('product-detail-title');
+                    if (title) title.innerText = product.name;
+
+                    // ... existing render logic ...
                     content.innerHTML = `
                 <div class="space-y-4">
                     <div class="aspect-square w-full rounded-xl overflow-hidden bg-gray-100">
@@ -1388,12 +1394,21 @@
                             <p class="text-gray-700 text-sm leading-relaxed">${product.description}</p>
                         </div>
                     ` : ''}
-
-                    <button onclick="addToCart('${product.id}'); closeProductDetail();" class="w-full bg-pharmeasy-teal text-white py-3.5 rounded-xl font-bold text-base hover:bg-teal-600 transition-colors shadow-lg sticky bottom-0">
-                        Add to Cart
-                    </button>
                 </div>
             `;
+
+                    // Re-bind the footer button (if it exists outside content div)
+                    if (addBtn) {
+                        // Clone to clear listeners
+                        const newBtn = addBtn.cloneNode(true);
+                        addBtn.parentNode.replaceChild(newBtn, addBtn);
+                        newBtn.onclick = () => {
+                            addToCart(product.id);
+                            closeProductDetail();
+                        };
+                    } else {
+                        // Ensure button is valid if it was internal
+                    }
 
                     modal.classList.remove('hidden');
                     lucide.createIcons();
