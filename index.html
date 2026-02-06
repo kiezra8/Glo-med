@@ -2054,14 +2054,14 @@
                         </div>
                     ` : ''}
                     ${chats.map(chat => `
-                    <div class="chat-row flex items-center gap-3 p-4 hover:bg-gray-50 cursor-pointer">
+                    <div onclick="openChat('${chat.id}', '${chat.userId}', '${chat.userName}')" class="chat-row flex items-center gap-3 p-4 hover:bg-gray-50 cursor-pointer transition-colors">
                         <div class="relative">
                             <img src="${chat.avatar || 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=100&h=100&fit=crop'}" class="w-12 h-12 rounded-full object-cover">
                             ${chat.unread > 0 ? `<div class="absolute -top-1 -right-1 bg-green-500 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full border-2 border-white font-bold">${chat.unread}</div>` : ''}
                         </div>
                         <div class="flex-1 min-w-0">
                             <div class="flex justify-between items-baseline mb-1">
-                                <h4 class="font-semibold text-gray-900 text-base truncate">${isUserAdmin ? chat.userName : 'Support Team'}</h4>
+                                <h4 class="font-semibold text-gray-900 text-base truncate">${chat.userName || 'Support Team'}</h4>
                                 <span class="text-[10px] text-gray-400 whitespace-nowrap">${chat.time}</span>
                             </div>
                             <p class="text-sm text-gray-500 truncate mt-0.5 flex items-center gap-1">
@@ -2074,12 +2074,20 @@
              </div>`;
                 }
 
-                async function startGuestChat() {
-                    const name = document.getElementById('guest-name').value;
-                    if (!name) return;
-                    // Mock a user for session
+                window.openChat = function (id, userId, userName) {
+                    state.activeChat = id;
+                    state.activeChatUserName = userName;
+                    state.page = 'chat-thread';
+                    updateUI();
+                };
 
-                    // Subscribe logic reused...
+                function renderChatThread() {
+                    const chatId = state.activeChat;
+                    if (!chatId) return setPage('chat');
+
+                    const isUserAdmin = currentUser.role === 'admin';
+
+                    // Unsubscribe previous if exists (though updateUI handles this too)
                     if (messagesUnsubscribe) { messagesUnsubscribe(); messagesUnsubscribe = null; }
 
                     document.getElementById('main-content').innerHTML = `
@@ -2088,12 +2096,12 @@
 
                  <!--Chat Header-->
                  <div class="bg-[#008069] p-2 flex items-center gap-2 sticky top-0 shadow-sm z-20 text-white">
-                    <button onclick="navigateTo('chat')" class="p-1"><i data-lucide="arrow-left" class="w-6 h-6 text-white"></i></button>
+                    <button onclick="goBack()" class="p-1"><i data-lucide="arrow-left" class="w-6 h-6 text-white"></i></button>
                     <div class="w-9 h-9 rounded-full bg-gray-200 overflow-hidden">
                         <img src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=100&h=100&fit=crop" class="w-full h-full object-cover">
                     </div>
                     <div>
-                        <h3 class="font-bold text-white text-base leading-tight">${isUserAdmin ? state.activeChatUserName || 'User' : 'Support Team'}</h3>
+                        <h3 class="font-bold text-white text-base leading-tight">${state.activeChatUserName || 'Support Team'}</h3>
                         <p class="text-[11px] text-white/80">Online</p>
                     </div>
                  </div>
@@ -2133,7 +2141,6 @@
                     // Firestore Realtime Listener
                     messagesUnsubscribe = db.collection('messages')
                         .where('chat_id', '==', chatId)
-                        // .orderBy('timestamp', 'asc') // Removed to prevent index errors
                         .onSnapshot(snapshot => {
                             const rawMessages = snapshot.docs.map(doc => ({
                                 id: doc.id,
@@ -2164,7 +2171,7 @@
                         }, error => {
                             console.error("Msg Subscription Error", error);
                             const container = document.getElementById('messages-container');
-                            if (container) container.innerHTML = `<div class="p-4 text-center text-red-500 text-xs">Failed to load messages. Please ensure indices are created or check console.</div>`;
+                            if (container) container.innerHTML = `<div class="p-4 text-center text-red-500 text-xs">Failed to load messages.</div>`;
                         });
 
                     // Reset unread
@@ -2207,61 +2214,7 @@
                     lucide.createIcons();
                 }
 
-                async function handleChatImageSelect(input) {
-                    const file = input.files[0];
-                    if (!file) return;
 
-                    const chatId = state.activeChat;
-                    if (!chatId) return;
-
-                    try {
-                        showToast("Uploading image...");
-
-                        // Upload to Cloudinary
-                        const formData = new FormData();
-                        formData.append('file', file);
-                        formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-
-                        const response = await fetch(CLOUDINARY_UPLOAD_URL, {
-                            method: 'POST',
-                            body: formData
-                        });
-
-                        const data = await response.json();
-
-                        if (!response.ok) {
-                            throw new Error(data.error?.message || 'Image upload failed');
-                        }
-
-                        const imageUrl = data.secure_url;
-
-                        // Send message with image
-                        await db.collection('messages').add({
-                            chat_id: chatId,
-                            text: '',
-                            type: 'image',
-                            image: imageUrl,
-                            sender_id: currentUser.uid,
-                            sender_name: currentUser.name,
-                            timestamp: new Date().toISOString()
-                        });
-
-                        // Update chat metadata
-                        const isUserAdmin = currentUser.role === 'admin';
-                        await db.collection('chats').doc(chatId).update({
-                            last_message: '📷 Image',
-                            last_message_time: new Date().toISOString(),
-                            unread_admin: isUserAdmin ? 0 : 1,
-                            unread_client: isUserAdmin ? 1 : 0
-                        });
-
-                        input.value = ''; // Clear input
-                        showToast("Image sent!");
-                    } catch (e) {
-                        console.error("Image upload error:", e);
-                        alert("Failed to send image: " + e.message);
-                    }
-                }
 
 
                 async function sendMessage() {
@@ -2800,6 +2753,7 @@
                     else if (state.page === 'search-results') renderSearchResults();
                     else if (state.page === 'cart') renderCart();
                     else if (state.page === 'chat') renderChat();
+                    else if (state.page === 'chat-thread') renderChatThread();
                     else if (state.page === 'profile') renderProfile();
                     renderBottomNav();
                     lucide.createIcons();
