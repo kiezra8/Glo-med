@@ -1776,6 +1776,7 @@
                             </div>
                             <div class="mt-2 px-2">
                                 <h3 class="text-sm text-gray-700 line-clamp-1 mb-0.5">${p.name}</h3>
+                                <p class="text-xs text-gray-500 line-clamp-2 mb-2 h-8">${p.description || ''}</p>
                                 <div class="flex items-center justify-between gap-2">
                                     <span class="text-base font-bold text-gray-900">${p.price}</span>
                                     <button onclick="event.stopPropagation(); addToCart('${p.id}')" class="bg-pharmeasy-teal text-white px-2 py-1 rounded-full text-[10px] font-semibold hover:bg-teal-600 transition-colors whitespace-nowrap">
@@ -1812,7 +1813,22 @@
                     <h3 class="font-bold text-gray-900 mb-4">Search Results for "${query}"</h3>
                 ${results.length === 0 ? '<p class="text-gray-500">No products found.</p>' :
                             `<div class="grid grid-cols-2 gap-3">
-                    ${results.map(p => `<div class="product-card"><div class="p-3"><div class="relative rounded-lg overflow-hidden h-40 mb-2"><img src="${p.image}" alt="${p.name}" class="w-full h-full object-cover"></div><h3 class="product-name mb-1 line-clamp-2 h-9">${p.name}</h3><div class="mb-3"><div class="price-current">${p.price}</div></div><button onclick="addToCart('${p.id}')" class="w-full pharmeasy-btn text-xs">Add to Cart</button></div></div>`).join('')}
+                    ${results.map(p => `
+                        <div class="bg-white rounded-lg overflow-hidden pb-2 group relative">
+                             <div class="relative aspect-[4/5] bg-gray-100" onclick="openProductDetail('${p.id}')">
+                                <img src="${p.image}" alt="${p.name}" class="w-full h-full object-cover">
+                            </div>
+                            <div class="mt-2 px-2">
+                                <h3 class="text-sm text-gray-700 line-clamp-1 mb-0.5">${p.name}</h3>
+                                <p class="text-xs text-gray-500 line-clamp-2 mb-2 h-8">${p.description || ''}</p>
+                                <div class="flex items-center justify-between gap-2">
+                                    <span class="text-base font-bold text-gray-900">${p.price}</span>
+                                    <button onclick="event.stopPropagation(); addToCart('${p.id}')" class="bg-pharmeasy-teal text-white px-2 py-1 rounded-full text-[10px] font-semibold hover:bg-teal-600 transition-colors whitespace-nowrap">
+                                        Add to Cart
+                                    </button>
+                                </div>
+                            </div>
+                        </div>`).join('')}
                 </div>`}
             </div>`;
                 }
@@ -1888,6 +1904,7 @@
                         
                         <div class="mt-2 px-2">
                             <h3 class="text-sm text-gray-700 line-clamp-1 mb-0.5">${p.name}</h3>
+                            <p class="text-xs text-gray-500 line-clamp-2 mb-2 h-8">${p.description || ''}</p>
                             <div class="flex items-center justify-between gap-2">
                                 <span class="text-base font-bold text-gray-900">${p.price}</span>
                                 <button onclick="event.stopPropagation(); addToCart('${p.id}')" class="bg-pharmeasy-teal text-white px-2 py-1 rounded-full text-[10px] font-semibold hover:bg-teal-600 transition-colors whitespace-nowrap">
