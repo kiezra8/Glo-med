@@ -1769,8 +1769,8 @@
                     </div>
                     <div class="grid grid-cols-2 gap-3">
                         ${safeTrendingProducts.slice(0, 4).map(p => `
-                        <div class="bg-white rounded-lg overflow-hidden pb-2 group">
-                            <div class="relative aspect-[4/5] bg-gray-100" onclick="openProductDetail('${p.id}')">
+                        <div class="bg-white rounded-lg overflow-hidden pb-2 group cursor-pointer active:scale-95 transition-transform" onclick="openProductDetail('${p.id}')">
+                            <div class="relative aspect-[4/5] bg-gray-100">
                                 <img src="${p.image}" alt="${p.name}" class="w-full h-full object-cover">
                                 <div class="absolute top-2 right-2 bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-sm">SALE</div>
                             </div>
@@ -1814,8 +1814,8 @@
                 ${results.length === 0 ? '<p class="text-gray-500">No products found.</p>' :
                             `<div class="grid grid-cols-2 gap-3">
                     ${results.map(p => `
-                        <div class="bg-white rounded-lg overflow-hidden pb-2 group relative">
-                             <div class="relative aspect-[4/5] bg-gray-100" onclick="openProductDetail('${p.id}')">
+                        <div class="bg-white rounded-lg overflow-hidden pb-2 group relative cursor-pointer active:scale-95 transition-transform" onclick="openProductDetail('${p.id}')">
+                             <div class="relative aspect-[4/5] bg-gray-100">
                                 <img src="${p.image}" alt="${p.name}" class="w-full h-full object-cover">
                             </div>
                             <div class="mt-2 px-2">
@@ -1892,13 +1892,13 @@
 
             <div class="grid grid-cols-2 gap-3">
                 ${(state.selectedSubcategory.products || []).map(p => `
-                    <div class="bg-white rounded-lg overflow-hidden pb-2 group relative">
+                    <div class="bg-white rounded-lg overflow-hidden pb-2 group relative cursor-pointer active:scale-95 transition-transform" onclick="openProductDetail('${p.id}')">
                         ${isAdmin ? `
                         <div class="absolute top-2 left-2 flex flex-col gap-2 z-10" onclick="event.stopPropagation()">
                             <button onclick="openEditModal('edit', 'product', '${p.id}')" class="p-1.5 bg-white/90 rounded-full shadow-sm hover:bg-white text-blue-600"><i data-lucide="edit-2" class="w-3 h-3"></i></button>
                             <button onclick="deleteItem('product', '${p.id}')" class="p-1.5 bg-white/90 rounded-full shadow-sm hover:bg-white text-red-600"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
                         </div>` : ''}
-                        <div class="relative aspect-[4/5] bg-gray-100" onclick="openProductDetail('${p.id}')">
+                        <div class="relative aspect-[4/5] bg-gray-100">
                             <img src="${p.image}" alt="${p.name}" class="w-full h-full object-cover">
                         </div>
                         
