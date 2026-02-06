@@ -889,47 +889,47 @@
                     updateUI();
 
                     try {
-                        // Fetch Categories
-                        const catSnap = await db.collection('categories').get();
+                        const isAdmin = currentUser && currentUser.role === 'admin';
+                        const promises = [
+                            db.collection('categories').get(),
+                            db.collection('news').orderBy('timestamp', 'desc').get(),
+                            db.collection('subcategories').get(),
+                            db.collection('products').get()
+                        ];
+
+                        if (isAdmin) {
+                            promises.push(db.collection('orders').orderBy('created_at', 'desc').get());
+                        }
+
+                        // Fetch in Parallel
+                        const results = await Promise.all(promises);
+                        const catSnap = results[0];
+                        const newsSnap = results[1];
+                        const subSnap = results[2];
+                        const prodSnap = results[3];
+                        const ordSnap = isAdmin ? results[4] : null;
+
                         const cats = catSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-                        // Fetch News
-                        const newsSnap = await db.collection('news').orderBy('timestamp', 'desc').get();
+                        // Process News
                         if (!newsSnap.empty) {
                             const dbNews = newsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                            // Merge: DB news first (newest), then defaults if you want, or just replace.
-                            // User likely wants mixed or just DB. Let's keep defaults at bottom if they aren't in DB.
-                            // Simple approach: Use DB news if exists, else defaults. 
-                            // Better: Append defaults that aren't in DB? 
-                            // Given previous pattern:
                             newsPosts = dbNews;
-                            // If we want defaults to persist, we should have seeded them. 
-                            // But for now, let's trust the DB. If DB has news, show DB news.
                         }
 
                         if (cats.length === 0) {
                             console.log("No categories in DB, using defaults");
-                            // populateProducts(); // REMOVED: Don't generate fake products
-                            // Automatically seed defaults if empty
                             seedDatabase();
                             updateUI();
                             return;
                         }
-                        // Fetch Subcategories
-                        const subSnap = await db.collection('subcategories').get();
-                        const subs = subSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-                        // Fetch Products
-                        const prodSnap = await db.collection('products').get();
+                        const subs = subSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                         const prods = prodSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-                        // Fetch Orders (if admin)
-                        let ords = [];
-                        const isAdmin = currentUser && currentUser.role === 'admin';
-                        if (isAdmin) {
-                            const ordSnap = await db.collection('orders').orderBy('created_at', 'desc').get();
-                            ords = ordSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                            orders = ords;
+                        // Process Orders
+                        if (ordSnap) {
+                            orders = ordSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                         }
 
                         // Rebuild categories with DB data
