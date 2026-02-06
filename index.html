@@ -1188,74 +1188,7 @@
                 window.closeEditModal = closeEditModal;
 
                 // Product Detail Modal Functions
-                function openProductDetail(productId) {
-                    const product = getProductById(productId);
-                    if (!product) {
-                        alert("Product not found");
-                        return;
-                    }
 
-                    const modal = document.getElementById('product-detail-modal');
-                    const title = document.getElementById('product-detail-title');
-                    const content = document.getElementById('product-detail-content');
-                    const addBtn = document.getElementById('product-detail-add-cart');
-
-                    title.innerText = product.name;
-
-                    content.innerHTML = `
-        <div class="space-y-4">
-            <div class="aspect-square bg-gray-100 rounded-xl overflow-hidden">
-                <img src="${product.image}" alt="${product.name}" class="w-full h-full object-cover">
-            </div>
-            
-            <div>
-                <h2 class="text-2xl font-bold text-gray-900 mb-2">${product.name}</h2>
-                <p class="text-sm text-gray-600 mb-3">${product.company || 'Generic'}</p>
-                <div class="flex items-center gap-3 mb-4">
-                    <span class="text-3xl font-bold text-pharmeasy-teal">${product.price}</span>
-                    ${product.unit ? `<span class="text-sm text-gray-500">per ${product.unit}</span>` : ''}
-                </div>
-            </div>
-
-            ${product.description ? `
-            <div class="border-t border-gray-200 pt-4">
-                <h3 class="font-bold text-gray-900 mb-2">Description</h3>
-                <p class="text-sm text-gray-700 leading-relaxed">${product.description}</p>
-            </div>
-            ` : ''}
-
-            ${product.rating ? `
-            <div class="border-t border-gray-200 pt-4">
-                <h3 class="font-bold text-gray-900 mb-2">Rating</h3>
-                <div class="flex items-center gap-2">
-                    <div class="flex items-center">
-                        ${Array(5).fill(0).map((_, i) => `
-                            <i data-lucide="star" class="w-4 h-4 ${i < Math.floor(product.rating) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}"></i>
-                        `).join('')}
-                    </div>
-                    <span class="text-sm text-gray-600">${product.rating} ${product.reviews ? `(${product.reviews} reviews)` : ''}</span>
-                </div>
-            </div>
-            ` : ''}
-        </div>
-    `;
-
-                    addBtn.onclick = () => {
-                        addToCart(productId);
-                        closeProductDetail();
-                    };
-
-                    modal.classList.remove('hidden');
-                    lucide.createIcons();
-                }
-
-                function closeProductDetail() {
-                    const modal = document.getElementById('product-detail-modal');
-                    modal.classList.add('hidden');
-                }
-
-                window.openProductDetail = openProductDetail;
-                window.closeProductDetail = closeProductDetail;
 
                 async function saveItem(mode, type, idOrParentId, updates, existingItem) {
                     const saveBtn = document.getElementById('edit-save-btn');
@@ -2424,7 +2357,9 @@
                     } else if (state.page === 'search-results') {
                         state.page = 'home';
                         state.searchQuery = '';
-                    } else if (['chat-thread', 'orders', 'news-post'].includes(state.page)) {
+                    } else if (state.page === 'chat-thread') {
+                        state.page = 'chat';
+                    } else if (['orders', 'news-post'].includes(state.page)) {
                         state.page = 'home';
                     } else {
                         state.page = 'home';
