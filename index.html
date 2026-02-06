@@ -1475,12 +1475,7 @@
                 window.closeProductDetail = closeProductDetail;
 
                 function openCategory(i) { state.selectedCategory = categories[i]; state.page = 'subcategories'; state.selectedSubcategory = null; updateUI(); }
-                function openSubcategory(i) { state.selectedSubcategory = state.selectedCategory.subcategories[i]; state.page = 'products'; updateUI(); }
-                function goBack() {
-                    if (state.page === 'products') { state.page = 'subcategories'; state.selectedSubcategory = null; }
-                    else if (state.page === 'subcategories') { state.page = 'home'; state.selectedCategory = null; }
-                    updateUI();
-                }
+
 
                 function nextSlide() {
                     const slides = document.querySelectorAll('.hero-slide');
@@ -1644,41 +1639,7 @@
                 }
 
 
-                function renderHeader() {
-                    const header = document.getElementById('header');
-                    if (!header) return;
 
-                    header.innerHTML = `
-            <div class="flex items-center gap-3 px-4 py-3 bg-white w-full">
-               ${state.page !== 'home' ? `<button onclick="goBack()" class="p-2 -ml-2 text-black"><i data-lucide="chevron-left" class="w-6 h-6"></i></button>` : `<div class="font-bold text-xl tracking-tight text-pharmeasy-teal">Glo-Med</div>`}
-               
-               <div class="flex-1 max-w-md mx-2 relative">
-                    <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
-                    <input type="text" 
-                           id="search-input"
-                           value="${state.searchQuery || ''}"
-                           oninput="handleSearch(this.value)"
-                           placeholder="Search products..." 
-                           class="w-full bg-gray-50 border-none rounded-full py-2 pl-9 pr-4 text-sm focus:ring-1 focus:ring-pharmeasy-teal transition-all placeholder:text-gray-400">
-               </div>
-
-               <div class="flex items-center gap-1">
-                   <button onclick="navigateTo('cart')" class="p-2 text-black hover:bg-gray-100 rounded-full relative" aria-label="Cart">
-                       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6">
-                           <circle cx="8" cy="21" r="1"/>
-                           <circle cx="19" cy="21" r="1"/>
-                           <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>
-                       </svg>
-                       ${state.cart.length > 0 ? `<div class="absolute top-0 right-0 w-5 h-5 bg-red-500 rounded-full border-2 border-white text-white text-[10px] flex items-center justify-center font-bold">${state.cart.length}</div>` : ''}
-                   </button>
-                    <button onclick="navigateTo('profile')" class="w-9 h-9 rounded-full overflow-hidden border border-gray-200 flex items-center justify-center ml-1">
-                         ${currentUser && currentUser.photoURL ? `<img src="${currentUser.photoURL}" class="w-full h-full object-cover">` : `<i data-lucide="user" class="w-5 h-5 text-gray-500"></i>`}
-                    </button>
-               </div>
-            </div>`;
-
-                    lucide.createIcons();
-                }
 
                 window.handleSearch = function (query) {
                     state.searchQuery = query.toLowerCase().trim();
@@ -2007,39 +1968,7 @@
                 }
 
 
-                function renderCart() {
-                    const h = document.getElementById('main-content');
-                    if (state.cart.length === 0) {
-                        h.innerHTML = `<div class="flex flex-col items-center justify-center h-full p-6 text-center"><div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4"><i data-lucide="shopping-cart" class="w-10 h-10 text-gray-400"></i></div><h3 class="text-lg font-bold text-gray-900 mb-2">Your Cart is Empty</h3><p class="text-gray-500 text-sm mb-6">Looks like you haven't added any medical supplies yet.</p><button onclick="navigateTo('home')" class="pharmeasy-btn w-48">Start Shopping</button></div>`;
-                        return;
-                    }
 
-                    h.innerHTML = `<div class="p-4 pb-24"><div class="space-y-4">${state.cart.map(item => `
-                <div class="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex gap-3">
-                    <img src="${item.product.image}" class="w-20 h-20 bg-gray-100 rounded-lg object-cover">
-                    <div class="flex-1">
-                        <div class="flex justify-between items-start">
-                             <h4 class="text-sm font-semibold text-gray-900 line-clamp-2">${item.product.name}</h4>
-                             <button onclick="removeFromCart('${item.product.id}')" class="text-gray-400 hover:text-red-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-                        </div>
-                        <p class="text-xs text-gray-500 mb-2">${item.product.company}</p>
-                        <div class="flex items-center justify-between mt-2">
-                             <div class="price-current">${item.product.price}</div>
-                             <div class="flex items-center gap-3 bg-gray-50 rounded-lg px-2 py-1">
-                                 <button onclick="updateQuantity('${item.product.id}', -1)" class="text-gray-600 font-bold">-</button>
-                                 <span class="text-sm font-medium text-gray-900">${item.quantity}</span>
-                                 <button onclick="updateQuantity('${item.product.id}', 1)" class="text-pharmeasy-teal font-bold">+</button>
-                             </div>
-                        </div>
-                    </div>
-                </div>`).join('')}
-            </div>
-            
-             <div class="fixed bottom-[70px] left-0 right-0 bg-white border-t border-gray-100 p-4 max-w-md mx-auto">
-                <button onclick="createOrder()" class="w-full pharmeasy-btn py-3 text-base shadow-lg shadow-teal-700/20">Order Now</button>
-             </div>
-            </div> `;
-                }
 
                 async function updateOrderStatus(id, status) {
                     if (!confirm(`Mark order as ${status}?`)) return;
@@ -2093,6 +2022,7 @@
                 }
 
                 function renderChat() {
+                    console.log('renderChat called, currentUser:', currentUser);
                     // Guest Chat Logic: Allow guests to chat with support locally or prompted name
                     if (!currentUser) {
                         // Fallback for guests - show a simple "Start Chat as Guest"
