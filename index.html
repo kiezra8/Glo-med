@@ -1056,7 +1056,7 @@
                     const saveBtn = document.getElementById('edit-save-btn');
 
                     modal.classList.remove('hidden');
-                    modal.style.display = 'flex';
+                    modal.style.display = 'block'; // Changed to block for bottom sheet positioning
 
                     // Set context
                     currentEdit = { mode, type, id: idOrParentId }; // idOrParentId might be parentID for create
@@ -1197,7 +1197,7 @@
                     const modal = document.getElementById('edit-modal');
                     if (modal) {
                         modal.classList.add('hidden');
-                        modal.style.display = 'none';
+                        modal.style.display = 'none'; // Ensure display is none
                     }
                 }
 
@@ -2993,7 +2993,7 @@
                     </div>
 
                     <div
-                        class="px-4 py-3 border-t border-gray-200 bg-white flex justify-end gap-2 flex-shrink-0 sticky bottom-0">
+                        class="px-4 py-3 border-t border-gray-200 bg-white flex justify-end gap-2 flex-shrink-0 sticky bottom-0 pb-8">
                         <button onclick="closeEditModal()"
                             class="px-4 py-2.5 rounded-lg text-gray-700 font-semibold bg-gray-100 hover:bg-gray-200 text-sm">Cancel</button>
                         <button id="edit-save-btn" onclick="saveEditChanges()"
