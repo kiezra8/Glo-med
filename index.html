@@ -1026,12 +1026,6 @@
                             body: formData
                         });
 
-                        const data = await response.json();
-
-                        if (!response.ok) {
-                            throw new Error(data.error?.message || 'Cloudinary upload failed');
-                        }
-
                         const publicUrl = data.secure_url;
 
                         // If targetId acts as a DOM ID, update it
@@ -1044,8 +1038,7 @@
 
                     } catch (e) {
                         console.error("Upload failed:", e);
-                        // FORCE ALERT FOR DEBUGGING
-                        alert("CRITICAL UPLOAD ERROR:\n" + e.message + "\n\nCheck console for details.");
+                        alert("Upload failed: " + e.message);
                         throw e;
                     }
                 }
@@ -1060,6 +1053,7 @@
 
                     // Set context
                     currentEdit = { mode, type, id: idOrParentId }; // idOrParentId might be parentID for create
+
 
                     let item = {};
                     let fields = [];
@@ -1138,54 +1132,64 @@
                     }).join('');
 
                     saveBtn.innerText = mode === 'create' ? 'Create' : 'Save Changes';
+                    currentEdit.fields = fields; // IMPORTANT: Store fields for save handler
 
-                    // Override onclick to handle upload + save in one go
-                    saveBtn.onclick = async () => {
-                        saveBtn.disabled = true;
-                        const originalText = saveBtn.innerText;
-                        saveBtn.innerText = "Processing...";
-
-                        try {
-                            const updates = {};
-                            fields.forEach(f => {
-                                const el = document.getElementById(`edit-${f.key}`);
-                                if (el) updates[f.key] = el.value;
-                            });
-
-                            // Check for file upload
-                            const fileInput = document.getElementById('edit-file-input');
-                            if (fileInput && fileInput.files.length > 0) {
-                                saveBtn.innerText = "Uploading Image...";
-                                const publicUrl = await handleFileUpload(fileInput, 'edit-modal-status'); // Use dummy or unrelated ID to avoid UI conflicts or pass null
-                                if (publicUrl) {
-                                    updates.image = publicUrl;
-                                } else {
-                                    throw new Error("Image upload failed to return a URL");
-                                }
-                            }
-
-                            // Ensure we have an item for edit mode
-                            if (mode === 'edit' && !currentEdit.item) {
-                                // Last ditch attempt to find it
-                                if (type === 'product') currentEdit.item = getProductById(idOrParentId);
-                                // if still missing, we might fail, but let's try proceed or error
-                                if (!currentEdit.item) throw new Error("Could not find original item to update.");
-                            }
-
-                            // Call actual save logic
-                            saveBtn.innerText = "Saving Data...";
-                            await saveItem(mode, type, idOrParentId, updates, currentEdit.item);
-                            closeEditModal();
-
-                        } catch (e) {
-                            console.error("Save/Upload operation failed:", e);
-                            alert("Operation failed: " + e.message);
-                        } finally {
-                            saveBtn.innerText = originalText;
-                            saveBtn.disabled = false;
-                        }
-                    };
+                } catch (err) {
+                    alert("Error initializing modal: " + err.message);
+                    console.error(err);
                 }
+            }
+
+                // Global Save Handler
+                window.saveEditChanges = async function () {
+                    const saveBtn = document.getElementById('edit-save-btn');
+                    if (!currentEdit) return;
+
+                    saveBtn.disabled = true;
+                    const originalText = saveBtn.innerText;
+                    saveBtn.innerText = "Processing...";
+
+                    try {
+                        const { mode, type, id, item, fields } = currentEdit;
+                        const updates = {};
+
+                        fields.forEach(f => {
+                            const el = document.getElementById(`edit-${f.key}`);
+                            if (el) updates[f.key] = el.value;
+                        });
+
+                        // Check for file upload
+                        const fileInput = document.getElementById('edit-file-input');
+                        if (fileInput && fileInput.files.length > 0) {
+                            saveBtn.innerText = "Uploading Image...";
+                            // Use handleFileUpload but handle the alert implicitly if it fails
+                            const publicUrl = await handleFileUpload(fileInput, 'edit-modal-status');
+                            if (publicUrl) {
+                                updates.image = publicUrl;
+                            } else {
+                                throw new Error("Image upload failed");
+                            }
+                        }
+
+                        // Ensure we have an item for edit mode
+                        if (mode === 'edit' && !item) {
+                            if (type === 'product') currentEdit.item = getProductById(id);
+                            if (!currentEdit.item) throw new Error("Could not find item to update.");
+                        }
+
+                        // Call actual save logic
+                        saveBtn.innerText = "Saving Data...";
+                        await saveItem(mode, type, id, updates, currentEdit.item);
+                        closeEditModal();
+
+                    } catch (e) {
+                        console.error("Save/Upload operation failed:", e);
+                        alert("Operation failed: " + e.message);
+                    } finally {
+                        saveBtn.innerText = originalText;
+                        saveBtn.disabled = false;
+                    }
+                };
 
                 function closeEditModal() {
                     const modal = document.getElementById('edit-modal');
@@ -2986,7 +2990,7 @@
                     <div class="px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex justify-end gap-3">
                         <button onclick="closeEditModal()"
                             class="px-5 py-2.5 rounded-xl text-gray-600 font-semibold hover:bg-white hover:shadow-sm border border-transparent hover:border-gray-200 transition-all">Cancel</button>
-                        <button id="edit-save-btn"
+                        <button id="edit-save-btn" onclick="saveEditChanges()"
                             class="px-6 py-2.5 rounded-xl bg-pharmeasy-teal text-white font-bold shadow-lg shadow-teal-500/20 hover:bg-teal-700 hover:shadow-teal-500/30 transition-all transform active:scale-95">Save
                             Changes</button>
                     </div>
