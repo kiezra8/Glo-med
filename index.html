@@ -1133,12 +1133,7 @@
 
                     saveBtn.innerText = mode === 'create' ? 'Create' : 'Save Changes';
                     currentEdit.fields = fields; // IMPORTANT: Store fields for save handler
-
-                } catch (err) {
-                    alert("Error initializing modal: " + err.message);
-                    console.error(err);
                 }
-            }
 
                 // Global Save Handler
                 window.saveEditChanges = async function () {
