@@ -1026,6 +1026,12 @@
                             body: formData
                         });
 
+                        const data = await response.json();
+
+                        if (!response.ok) {
+                            throw new Error(data.error?.message || 'Cloudinary upload failed');
+                        }
+
                         const publicUrl = data.secure_url;
 
                         // If targetId acts as a DOM ID, update it
