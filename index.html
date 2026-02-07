@@ -1140,48 +1140,49 @@
 
                     // Override onclick to handle upload + save in one go
                     saveBtn.onclick = async () => {
-                        const updates = {};
-                        fields.forEach(f => {
-                            const el = document.getElementById(`edit-${f.key}`);
-                            if (el) updates[f.key] = el.value;
-                        });
+                        saveBtn.disabled = true;
+                        const originalText = saveBtn.innerText;
+                        saveBtn.innerText = "Processing...";
 
-                        // Check for file upload
-                        const fileInput = document.getElementById('edit-file-input');
-                        if (fileInput && fileInput.files.length > 0) {
-                            saveBtn.innerText = "Uploading...";
-                            saveBtn.disabled = true;
-                            try {
-                                const file = fileInput.files[0];
+                        try {
+                            const updates = {};
+                            fields.forEach(f => {
+                                const el = document.getElementById(`edit-${f.key}`);
+                                if (el) updates[f.key] = el.value;
+                            });
 
-                                // Upload to Cloudinary
-                                const formData = new FormData();
-                                formData.append('file', file);
-                                formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-
-                                const response = await fetch(CLOUDINARY_UPLOAD_URL, {
-                                    method: 'POST',
-                                    body: formData
-                                });
-
-                                const data = await response.json();
-
-                                if (!response.ok) {
-                                    throw new Error(data.error?.message || 'Upload failed');
+                            // Check for file upload
+                            const fileInput = document.getElementById('edit-file-input');
+                            if (fileInput && fileInput.files.length > 0) {
+                                saveBtn.innerText = "Uploading Image...";
+                                const publicUrl = await handleFileUpload(fileInput, 'edit-modal-status'); // Use dummy or unrelated ID to avoid UI conflicts or pass null
+                                if (publicUrl) {
+                                    updates.image = publicUrl;
+                                } else {
+                                    throw new Error("Image upload failed to return a URL");
                                 }
-
-                                updates.image = data.secure_url;
-                            } catch (e) {
-                                console.error("Upload Error:", e);
-                                alert("Upload Error: " + e.message);
-                                saveBtn.innerText = "Save";
-                                saveBtn.disabled = false;
-                                return; // Stop save
                             }
+
+                            // Ensure we have an item for edit mode
+                            if (mode === 'edit' && !currentEdit.item) {
+                                // Last ditch attempt to find it
+                                if (type === 'product') currentEdit.item = getProductById(idOrParentId);
+                                // if still missing, we might fail, but let's try proceed or error
+                                if (!currentEdit.item) throw new Error("Could not find original item to update.");
+                            }
+
+                            // Call actual save logic
+                            saveBtn.innerText = "Saving Data...";
+                            await saveItem(mode, type, idOrParentId, updates, currentEdit.item);
+                            closeEditModal();
+
+                        } catch (e) {
+                            console.error("Save/Upload operation failed:", e);
+                            alert("Operation failed: " + e.message);
+                        } finally {
+                            saveBtn.innerText = originalText;
+                            saveBtn.disabled = false;
                         }
-                        // Call actual save logic
-                        await saveItem(mode, type, idOrParentId, updates, currentEdit.item);
-                        closeEditModal();
                     };
                 }
 
