@@ -2962,6 +2962,35 @@
                     });
                 }
             </script>
+
+            <!-- Edit Modal (Restored) -->
+            <div id="edit-modal"
+                class="fixed inset-0 bg-black/50 hidden items-center justify-center z-[60] flex backdrop-blur-sm transition-opacity">
+                <div
+                    class="bg-white rounded-2xl w-full max-w-lg mx-4 overflow-hidden shadow-2xl transform transition-all scale-100">
+                    <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                        <h3 id="edit-modal-title" class="font-bold text-gray-900 text-lg tracking-tight">Edit Item</h3>
+                        <button onclick="closeEditModal()"
+                            class="p-2 -mr-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all">
+                            <i data-lucide="x" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+
+                    <div class="p-6 max-h-[75vh] overflow-y-auto custom-scrollbar">
+                        <div id="edit-modal-content" class="space-y-5">
+                            <!-- Dynamic Content -->
+                        </div>
+                    </div>
+
+                    <div class="px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex justify-end gap-3">
+                        <button onclick="closeEditModal()"
+                            class="px-5 py-2.5 rounded-xl text-gray-600 font-semibold hover:bg-white hover:shadow-sm border border-transparent hover:border-gray-200 transition-all">Cancel</button>
+                        <button id="edit-save-btn"
+                            class="px-6 py-2.5 rounded-xl bg-pharmeasy-teal text-white font-bold shadow-lg shadow-teal-500/20 hover:bg-teal-700 hover:shadow-teal-500/30 transition-all transform active:scale-95">Save
+                            Changes</button>
+                    </div>
+                </div>
+            </div>
 </body>
 
 </html>
