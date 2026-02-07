@@ -1044,7 +1044,8 @@
 
                     } catch (e) {
                         console.error("Upload failed:", e);
-                        alert("Upload failed: " + e.message);
+                        // FORCE ALERT FOR DEBUGGING
+                        alert("CRITICAL UPLOAD ERROR:\n" + e.message + "\n\nCheck console for details.");
                         throw e;
                     }
                 }
