@@ -1118,23 +1118,23 @@
                     content.innerHTML = fields.map(f => {
                         if (f.key === 'image') {
                             return `
-                    <div class="mb-3">
+                    <div class="mb-2">
                         <input type="hidden" id="edit-${f.key}" value="${item && item[f.key] ? item[f.key] : ''}">
-                        <div class="p-3 bg-gray-50 rounded-lg border border-dashed border-gray-300">
-                            <label class="block text-xs font-bold text-gray-700 mb-2">Product Image (Required)</label>
-                            <input type="file" id="edit-file-input" accept="image/*" class="block w-full text-xs text-slate-500 file:mr-2 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-pharmeasy-teal file:text-white hover:file:bg-teal-600 mb-2"/>
+                        <div class="p-2 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Product Image</label>
+                            <input type="file" id="edit-file-input" accept="image/*" class="block w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-pharmeasy-teal file:text-white hover:file:bg-teal-600 mb-1"/>
                             <p class="text-[10px] text-gray-500 font-medium truncate">
-                                ${item && item[f.key] ? '✅ Current image set (Upload new to replace)' : 'No image set'}
+                                ${item && item[f.key] ? '✅ Image set' : 'No image'}
                             </p>
                         </div>
                     </div>`;
                         }
                         return `
-                <div class="mb-3">
+                <div class="mb-2">
                     <label class="block text-xs font-bold text-gray-700 mb-1">${f.label}</label>
                     <input type="${f.type}" id="edit-${f.key}" value="${item && item[f.key] ? item[f.key] : ''}" 
                            class="w-full pharmeasy-search px-3 py-2 text-sm" 
-                           placeholder="Enter ${f.label}">
+                           placeholder="${f.label}">
                 </div>`;
                     }).join('');
 
@@ -2985,8 +2985,8 @@
                         </button>
                     </div>
 
-                    <div class="p-6 overflow-y-auto flex-1 custom-scrollbar">
-                        <div id="edit-modal-content" class="space-y-5">
+                    <div class="p-4 overflow-y-auto flex-1 custom-scrollbar">
+                        <div id="edit-modal-content" class="space-y-3">
                             <!-- Dynamic Content -->
                         </div>
                     </div>
