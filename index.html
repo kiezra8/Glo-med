@@ -39,6 +39,23 @@
         window.auth = auth;
         window.storage = storage;
         window.productMap = new Map(); // Global product registry O(1)
+
+        // Image Download Helper
+        window.downloadImage = async (url, filename) => {
+            try {
+                const response = await fetch(url);
+                const blob = await response.blob();
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = filename || 'downloaded-image.jpg';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            } catch (e) {
+                console.error("Download failed, trying fallback:", e);
+                window.open(url, '_blank');
+            }
+        };
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -999,53 +1016,36 @@
                 // Admin Edit Logic
                 let currentEdit = null;
 
-                async function handleFileUpload(inputOrFile, targetId) {
-                    let file;
-                    if (inputOrFile instanceof File) {
-                        file = inputOrFile;
-                    } else if (inputOrFile.files && inputOrFile.files.length > 0) {
-                        file = inputOrFile.files[0];
-                    } else {
-                        return null;
+                // Cloudinary Upload Helper
+                async function uploadToCloudinary(file) {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+
+                    const response = await fetch(CLOUDINARY_UPLOAD_URL, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error?.message || 'Upload failed');
                     }
 
-                    // Optional: Update status if targetId is an ID string that has a corresponding msg element
-                    if (typeof targetId === 'string' && !targetId.startsWith('uploads/')) {
-                        const msgEl = document.getElementById(`upload-msg-${targetId.replace('edit-', '')}`);
-                        if (msgEl) msgEl.innerText = "Uploading...";
-                    }
+                    const data = await response.json();
+                    return data.secure_url;
+                }
 
-                    try {
-                        // Upload to Cloudinary instead of Firebase Storage
-                        const formData = new FormData();
-                        formData.append('file', file);
-                        formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+                // Helper to trigger hidden file input
+                window.triggerFileInput = function (id) {
+                    document.getElementById(id).click();
+                }
 
-                        const response = await fetch(CLOUDINARY_UPLOAD_URL, {
-                            method: 'POST',
-                            body: formData
-                        });
-
-                        const data = await response.json();
-
-                        if (!response.ok) {
-                            throw new Error(data.error?.message || 'Cloudinary upload failed');
-                        }
-
-                        const publicUrl = data.secure_url;
-
-                        // If targetId acts as a DOM ID, update it
-                        if (typeof targetId === 'string' && document.getElementById(targetId)) {
-                            document.getElementById(targetId).value = publicUrl;
-                        }
-
-                        // Also return it for the caller
-                        return publicUrl;
-
-                    } catch (e) {
-                        console.error("Upload failed:", e);
-                        alert("Upload failed: " + e.message);
-                        throw e;
+                // Helper to handle file selection display
+                window.handleFileSelect = function (input, labelId) {
+                    if (input.files && input.files.length > 0) {
+                        document.getElementById(labelId).innerText = "✅ Image Selected: " + input.files[0].name;
+                        document.getElementById(labelId).classList.add('text-green-600', 'font-bold');
                     }
                 }
 
@@ -1056,7 +1056,10 @@
                     const saveBtn = document.getElementById('edit-save-btn');
 
                     modal.classList.remove('hidden');
-                    modal.style.display = 'block'; // Changed to block for bottom sheet positioning
+                    modal.style.display = 'flex'; // Centered Card style requires flex
+
+                    // Render Icons for FAB
+                    setTimeout(() => lucide.createIcons(), 100);
 
                     // Set context
                     currentEdit = { mode, type, id: idOrParentId }; // idOrParentId might be parentID for create
@@ -1118,13 +1121,20 @@
                     content.innerHTML = fields.map(f => {
                         if (f.key === 'image') {
                             return `
-                    <div class="mb-2">
+                    <div class="mb-4">
                         <input type="hidden" id="edit-${f.key}" value="${item && item[f.key] ? item[f.key] : ''}">
-                        <div class="p-2 bg-gray-50 rounded-lg border border-dashed border-gray-300">
-                            <label class="block text-xs font-bold text-gray-700 mb-1">Product Image</label>
-                            <input type="file" id="edit-file-input" accept="image/*" class="block w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-pharmeasy-teal file:text-white hover:file:bg-teal-600 mb-1"/>
-                            <p class="text-[10px] text-gray-500 font-medium truncate">
-                                ${item && item[f.key] ? '✅ Image set' : 'No image'}
+                        <label class="block text-xs font-bold text-gray-700 mb-2">Product Image</label>
+                        
+                        <!-- Custom File Input Trigger -->
+                        <div class="flex flex-col gap-2">
+                            <button type="button" onclick="triggerFileInput('edit-file-input')" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 px-4 rounded-xl border border-dashed border-gray-400 flex items-center justify-center gap-2 transition-all active:scale-95">
+                                <i data-lucide="image-plus" class="w-5 h-5"></i>
+                                <span>Choose Image</span>
+                            </button>
+                            <input type="file" id="edit-file-input" accept="image/*" class="hidden" onchange="handleFileSelect(this, 'file-label-${f.key}')"/>
+                            
+                            <p id="file-label-${f.key}" class="text-xs text-center text-gray-500 truncate px-2">
+                                ${item && item[f.key] ? 'Current: ' + item[f.key].substring(0, 30) + '...' : 'No file selected'}
                             </p>
                         </div>
                     </div>`;
@@ -1143,13 +1153,16 @@
                 }
 
                 // Global Save Handler
+                // Global Save Handler
                 window.saveEditChanges = async function () {
-                    const saveBtn = document.getElementById('edit-save-btn');
+                    const saveBtn = document.getElementById('edit-save-btn'); // Desktop/Original
+                    const fabBtn = document.getElementById('fab-save-btn');   // Mobile FAB
+
                     if (!currentEdit) return;
 
-                    saveBtn.disabled = true;
-                    const originalText = saveBtn.innerText;
-                    saveBtn.innerText = "Processing...";
+                    // Update UI state
+                    if (saveBtn) { saveBtn.disabled = true; saveBtn.innerText = "Processing..."; }
+                    if (fabBtn) { fabBtn.disabled = true; fabBtn.innerHTML = '<i data-lucide="loader-2" class="w-6 h-6 animate-spin"></i>'; }
 
                     try {
                         const { mode, type, id, item, fields } = currentEdit;
@@ -1163,13 +1176,12 @@
                         // Check for file upload
                         const fileInput = document.getElementById('edit-file-input');
                         if (fileInput && fileInput.files.length > 0) {
-                            saveBtn.innerText = "Uploading Image...";
-                            // Use handleFileUpload but handle the alert implicitly if it fails
-                            const publicUrl = await handleFileUpload(fileInput, 'edit-modal-status');
+                            if (saveBtn) saveBtn.innerText = "Uploading...";
+
+                            // Using new Cloudinary helper
+                            const publicUrl = await uploadToCloudinary(fileInput.files[0]);
                             if (publicUrl) {
                                 updates.image = publicUrl;
-                            } else {
-                                throw new Error("Image upload failed");
                             }
                         }
 
@@ -1180,16 +1192,22 @@
                         }
 
                         // Call actual save logic
-                        saveBtn.innerText = "Saving Data...";
+                        if (saveBtn) saveBtn.innerText = "Saving Data...";
                         await saveItem(mode, type, id, updates, currentEdit.item);
+
+                        alert("✅ Validated: Data saved successfully!"); // Explicit success alert for user
                         closeEditModal();
 
                     } catch (e) {
                         console.error("Save/Upload operation failed:", e);
                         alert("Operation failed: " + e.message);
                     } finally {
-                        saveBtn.innerText = originalText;
-                        saveBtn.disabled = false;
+                        if (saveBtn) { saveBtn.innerText = "Save Changes"; saveBtn.disabled = false; }
+                        if (fabBtn) {
+                            fabBtn.disabled = false;
+                            fabBtn.innerHTML = '<i data-lucide="save" class="w-6 h-6"></i><span class="ml-2 font-bold text-sm">SAVE</span>';
+                            lucide.createIcons(); // Re-render icon
+                        }
                     }
                 };
 
@@ -1417,10 +1435,13 @@
                             </div>
 
                             <!-- Product Image -->
-                            <div class="bg-white mb-2">
+                            <div class="bg-white mb-2 relative group">
                                 <div class="aspect-square w-full bg-white flex items-center justify-center p-4">
                                      <img src="${product.image}" alt="${product.name}" class="w-full h-full object-contain max-h-[400px]">
                                 </div>
+                                <button onclick="downloadImage('${product.image}', '${product.name}.jpg')" class="absolute bottom-4 right-4 bg-white/90 p-2 rounded-full shadow-md text-gray-700 hover:text-pharmeasy-teal transition-all">
+                                    <i data-lucide="download" class="w-5 h-5"></i>
+                                </button>
                             </div>
 
                             <!-- Product Info -->
@@ -2166,7 +2187,7 @@
                  <!-- WA Style Input Bar -->
                  <div class="fixed bottom-0 left-0 right-0 bg-[#f0f2f5] px-2 py-2 flex items-end gap-2 z-50 max-w-md mx-auto min-h-[60px] pb-3">
                      <div class="flex-1 bg-white rounded-[24px] flex items-center px-4 py-2 shadow-sm border border-transparent focus-within:border-white transition-all">
-                        <button onclick="document.getElementById('chat-file-input').click()" class="text-gray-400 hover:text-gray-600 mr-3 -ml-1">
+                        <button onclick="triggerFileInput('chat-file-input')" class="text-gray-400 hover:text-gray-600 mr-3 -ml-1">
                              <i data-lucide="camera" class="w-6 h-6"></i>
                         </button>
                         <input type="file" id="chat-file-input" class="hidden" accept="image/*" onchange="handleChatImageSelect(this)">
@@ -2250,7 +2271,12 @@
                 <div class="flex ${isMe ? 'justify-end' : 'justify-start'}" >
                     <div class="${isMe ? 'chat-bubble-mine' : 'chat-bubble-theirs'} px-3 py-1.5 max-w-[80%] shadow-sm text-sm relative group">
                         ${m.type === 'image' ?
-                                `<img src="${m.image}" class="rounded-lg mb-1 max-w-[200px] cursor-pointer" onclick="window.open('${m.image}', '_blank')">`
+                                `<div class="relative group inline-block">
+                                    <img src="${m.image}" class="rounded-lg mb-1 max-w-[200px] cursor-pointer" onclick="window.open('${m.image}', '_blank')">
+                                    <button onclick="event.stopPropagation(); downloadImage('${m.image}')" class="absolute bottom-2 right-2 bg-black/50 hover:bg-black/70 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <i data-lucide="download" class="w-4 h-4"></i>
+                                    </button>
+                                 </div>`
                                 : `<p class="mr-12 mb-1 text-gray-900">${m.text}</p>`
                             }
                         <span class="text-[10px] text-gray-500 absolute bottom-1 right-2 flex items-center gap-0.5">
@@ -2746,7 +2772,8 @@
                     showToast("Uploading image...");
 
                     try {
-                        const url = await uploadChatImage(file);
+                        const url = await uploadToCloudinary(file); // Switch to Cloudinary
+
                         await db.collection('messages').add({
                             chat_id: state.activeChat,
                             text: 'Sent an image',
@@ -2971,34 +2998,45 @@
                 }
             </script>
 
-            <!-- Edit Modal (Restored) -->
+            <!-- Edit Modal (With Floating Save Button) -->
             <div id="edit-modal" class="fixed inset-0 bg-black/50 hidden z-[60] backdrop-blur-sm transition-opacity"
-                style="display: none;">
+                style="display: none; align-items: center; justify-content: center;">
                 <div
-                    class="bg-white rounded-t-3xl w-full absolute bottom-0 max-h-[85vh] flex flex-col overflow-hidden shadow-2xl">
+                    class="bg-white rounded-2xl w-full max-w-lg mx-4 max-h-[85vh] flex flex-col overflow-hidden shadow-2xl relative">
+
+                    <!-- Header -->
                     <div
-                        class="px-4 py-3 border-b border-gray-200 flex justify-between items-center bg-white flex-shrink-0">
-                        <h3 id="edit-modal-title" class="font-bold text-gray-900 text-base">Edit Item
-                        </h3>
+                        class="px-5 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50 flex-shrink-0">
+                        <h3 id="edit-modal-title" class="font-bold text-gray-900 text-lg">Edit Item</h3>
                         <button onclick="closeEditModal()"
-                            class="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full">
+                            class="p-2 -mr-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all">
                             <i data-lucide="x" class="w-5 h-5"></i>
                         </button>
                     </div>
 
-                    <div class="p-3 overflow-y-auto flex-1">
-                        <div id="edit-modal-content" class="space-y-2">
+                    <!-- Scrollable Content -->
+                    <div class="p-5 overflow-y-auto flex-1 custom-scrollbar pb-24"> <!-- Added pb-24 for FAB space -->
+                        <div id="edit-modal-content" class="space-y-4">
                             <!-- Dynamic Content -->
                         </div>
                     </div>
 
+                    <!-- Original Footer (Keep it for desktop, but FAB will override on mobile visually) -->
                     <div
-                        class="px-4 py-3 border-t border-gray-200 bg-white flex justify-end gap-2 flex-shrink-0 sticky bottom-0 pb-8">
+                        class="px-5 py-4 border-t border-gray-100 bg-gray-50/50 flex justify-end gap-3 flex-shrink-0 hidden md:flex">
                         <button onclick="closeEditModal()"
-                            class="px-4 py-2.5 rounded-lg text-gray-700 font-semibold bg-gray-100 hover:bg-gray-200 text-sm">Cancel</button>
-                        <button id="edit-save-btn" onclick="saveEditChanges()"
-                            class="px-5 py-2.5 rounded-lg bg-pharmeasy-teal text-white font-bold hover:bg-teal-700 text-sm">Save</button>
+                            class="px-5 py-2.5 rounded-xl text-gray-600 font-semibold hover:bg-white hover:shadow-sm border border-transparent hover:border-gray-200 transition-all">Cancel</button>
+                        <button onclick="saveEditChanges()"
+                            class="px-6 py-2.5 rounded-xl bg-pharmeasy-teal text-white font-bold shadow-lg shadow-teal-500/20 hover:bg-teal-700 hover:shadow-teal-500/30 transition-all">Save
+                            Changes</button>
                     </div>
+
+                    <!-- FLOATING SAVE BUTTON (Mobile Only) -->
+                    <button id="fab-save-btn" onclick="saveEditChanges()"
+                        class="md:hidden absolute bottom-5 right-5 z-[70] bg-pharmeasy-teal text-white p-4 rounded-full shadow-xl shadow-teal-500/40 transform active:scale-90 transition-all flex items-center justify-center">
+                        <i data-lucide="save" class="w-6 h-6"></i>
+                        <span class="ml-2 font-bold text-sm">SAVE</span>
+                    </button>
                 </div>
             </div>
 </body>
