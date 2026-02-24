@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --shein-blue: #1a73e8;
+  --shein-green: #10b981;
+  --shein-dark: #1e293b;
+  --shein-light: #f8fafc;
+}
+
+@layer base {
+  body {
+    @apply font-sans bg-gray-50 text-shein-dark;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@layer components {
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .shein-card {
+    @apply bg-white rounded-xl shadow-sm transition-all duration-200 active:scale-[0.98];
+  }
+
+  .pharmeasy-btn {
+    @apply bg-[#10847E] text-white rounded-lg font-bold transition-all active:scale-[0.98];
+  }
+}
+
+/* Custom Animations */
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+  }
+
+  to {
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
