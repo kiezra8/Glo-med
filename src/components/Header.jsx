@@ -1,9 +1,12 @@
 import React from 'react';
 import { Home, LayoutGrid, Sparkles, MessageCircle, User, ShoppingBag, Search, ChevronLeft } from 'lucide-react';
+import { useCart } from '../contexts/CartContext';
 
 const Header = ({ currentPage, onPageChange }) => {
+    const { getCartCount } = useCart();
+    const cartCount = getCartCount();
     const showSearch = ['home', 'categories'].includes(currentPage);
-    const isRootPage = ['home', 'categories', 'news', 'cart', 'profile'].includes(currentPage);
+    const isRootPage = ['home', 'categories', 'news', 'cart', 'profile', 'chat'].includes(currentPage);
 
     return (
         <header className="px-4 pt-4 pb-2 bg-white sticky top-0 z-50">
@@ -21,9 +24,11 @@ const Header = ({ currentPage, onPageChange }) => {
                 <div className="flex items-center gap-4">
                     <button onClick={() => onPageChange('cart')} className="relative text-shein-dark">
                         <ShoppingBag size={24} />
-                        <span className="absolute -top-1 -right-1.5 bg-shein-blue text-white text-[8px] font-bold min-w-[14px] h-3.5 rounded-full flex items-center justify-center border border-white px-0.5">
-                            0
-                        </span>
+                        {cartCount > 0 && (
+                            <span className="absolute -top-1.5 -right-1.5 bg-[#FF4545] text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center shadow-sm z-10 animate-in zoom-in duration-300">
+                                {cartCount}
+                            </span>
+                        )}
                     </button>
                     <button onClick={() => onPageChange('profile')} className="text-shein-dark">
                         <User size={24} />

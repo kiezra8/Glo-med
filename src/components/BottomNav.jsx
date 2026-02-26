@@ -1,18 +1,14 @@
 import React, { useState } from 'react';
-import { Home, LayoutGrid, ShoppingBag, User } from 'lucide-react';
-import { useCart } from '../contexts/CartContext';
+import { Home, LayoutGrid, MessageCircle, User } from 'lucide-react';
 
 const BottomNav = ({ currentPage, onPageChange }) => {
     // Add custom animation state for tab clicks
     const [animatingTab, setAnimatingTab] = useState(null);
-    const { getCartCount } = useCart();
-
-    const cartCount = getCartCount();
 
     const tabs = [
         { id: 'home', icon: Home, label: 'Home' },
         { id: 'categories', icon: LayoutGrid, label: 'Categories' },
-        { id: 'cart', icon: ShoppingBag, label: 'Cart' },
+        { id: 'chat', icon: MessageCircle, label: 'Chat' },
         { id: 'profile', icon: User, label: 'Me' }
     ];
 
@@ -45,11 +41,6 @@ const BottomNav = ({ currentPage, onPageChange }) => {
                                         }`}
                                     strokeWidth={isActive ? 2 : 1.5}
                                 />
-                                {tab.id === 'cart' && cartCount > 0 && (
-                                    <span className="absolute -top-1.5 -right-2 bg-[#FF4545] text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center shadow-sm z-10 animate-in zoom-in duration-300">
-                                        {cartCount}
-                                    </span>
-                                )}
                             </div>
                             <span className={`text-[10px] font-bold uppercase tracking-widest transition-colors ${isActive ? 'text-shein-dark' : 'text-gray-400'
                                 }`}>
