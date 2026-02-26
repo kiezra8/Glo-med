@@ -29,6 +29,18 @@ jobs:
           cache: 'npm'
       - name: Install dependencies
         run: npm ci
+      - name: Create .env file
+        run: |
+          echo "VITE_FIREBASE_API_KEY=AIzaSyAdiAf0Ni1wsm00PMiT1-agSmgPxEkvswo" >> .env
+          echo "VITE_FIREBASE_AUTH_DOMAIN=glo-med.firebaseapp.com" >> .env
+          echo "VITE_FIREBASE_PROJECT_ID=glo-med" >> .env
+          echo "VITE_FIREBASE_STORAGE_BUCKET=glo-med.firebasestorage.app" >> .env
+          echo "VITE_FIREBASE_MESSAGING_SENDER_ID=259320794812" >> .env
+          echo "VITE_FIREBASE_APP_ID=1:259320794812:web:179fbcd9710d6b1e9b4ab9" >> .env
+          echo "VITE_FIREBASE_MEASUREMENT_ID=G-XQXF0ZBRBV" >> .env
+          echo "VITE_CLOUDINARY_CLOUD_NAME=dvfuk2fzp" >> .env
+          echo "VITE_CLOUDINARY_UPLOAD_PRESET=Glo-Med" >> .env
+          echo "VITE_CLOUDINARY_UPLOAD_URL=https://api.cloudinary.com/v1_1/dvfuk2fzp/image/upload" >> .env
       - name: Build
         run: npm run build
       - name: Setup Pages
