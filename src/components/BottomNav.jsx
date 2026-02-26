@@ -1,6 +1,5 @@
 import React from 'react';
 import { Home, LayoutGrid, Sparkles, MessageCircle, User } from 'lucide-react';
-import { Home, LayoutGrid, Sparkles, MessageCircle, User } from 'lucide-react';
 
 const BottomNav = ({ currentPage, onPageChange }) => {
     const tabs = [
