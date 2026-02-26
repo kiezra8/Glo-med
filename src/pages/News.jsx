@@ -1,9 +1,12 @@
 import React from 'react';
 import { useAppData } from '../hooks/useAppData';
 import { User, MessageSquare, Heart, Share2, Play } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import AdminImageUpload from '../components/AdminImageUpload';
 
 const News = () => {
     const { newsPosts, loading } = useAppData();
+    const { isAdmin } = useAuth();
 
     return (
         <div className="bg-shein-light min-h-screen">
@@ -55,7 +58,14 @@ const News = () => {
                             </div>
 
                             {/* Post Media */}
-                            <div className="relative aspect-video bg-gray-50 mx-2 mb-2 rounded-[24px] overflow-hidden">
+                            <div className="relative aspect-video bg-gray-50 mx-2 mb-2 rounded-[24px] overflow-hidden group">
+                                {isAdmin && (
+                                    <AdminImageUpload
+                                        collectionName="news"
+                                        documentId={post.id}
+                                        className="top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    />
+                                )}
                                 <img src={post.image} className="w-full h-full object-cover" alt="" />
                                 {post.type === 'video' && (
                                     <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-[1px]">

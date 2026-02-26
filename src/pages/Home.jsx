@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useAppData } from '../hooks/useAppData';
 import { Sparkles, Zap, ChevronRight, Star, ShoppingBag } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import AdminImageUpload from '../components/AdminImageUpload';
 
 const Home = () => {
     const { categories, loading } = useAppData();
+    const { isAdmin } = useAuth();
     const [currentSlide, setCurrentSlide] = useState(0);
 
     const heroSlides = [
@@ -129,6 +132,13 @@ const Home = () => {
                         trendingProducts.map((p) => (
                             <div key={p.id} className="bg-white rounded-lg overflow-hidden group active:scale-[0.98] transition-all duration-200">
                                 <div className="relative aspect-[3/4] overflow-hidden bg-[#F6F6F6]">
+                                    {isAdmin && (
+                                        <AdminImageUpload
+                                            collectionName="products"
+                                            documentId={p.id}
+                                            className="top-1 left-1 scale-75 origin-top-left"
+                                        />
+                                    )}
                                     <img src={p.image} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={p.name} />
                                     {p.discount && (
                                         <div className="absolute top-0 left-0 bg-[#FF4545] text-white text-[10px] font-black px-2 py-0.5 rounded-br-lg">

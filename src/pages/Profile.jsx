@@ -1,25 +1,100 @@
-import React from 'react';
-import { User, LogOut, Camera, Star, CreditCard, Ticket, Settings, MapPin, Headphones, ShieldCheck, ChevronRight, Package, Truck, MessageSquare, Wallet } from 'lucide-react';
+import React, { useState } from 'react';
+import { User, LogOut, Camera, Star, CreditCard, Ticket, Settings, MapPin, Headphones, ShieldCheck, ChevronRight, Package, Truck, MessageSquare, Wallet, Loader2 } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 const Profile = () => {
-    const currentUser = null; // Will eventually use an Auth Context
+    const { currentUser, login, signup, logout, isAdmin } = useAuth();
+    const [isRegistering, setIsRegistering] = useState(false);
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [name, setName] = useState('');
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError('');
+        setLoading(true);
+
+        try {
+            if (isRegistering) {
+                if (!name) throw new Error("Please enter your name");
+                await signup(email, password, name);
+            } else {
+                await login(email, password);
+            }
+        } catch (err) {
+            setError(err.message || 'Failed to authenticate');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     if (!currentUser) {
         return (
-            <div className="bg-white min-h-screen flex flex-col items-center justify-center p-8 text-center">
-                <div className="w-24 h-24 bg-shein-light rounded-[40px] flex items-center justify-center mb-8 relative">
-                    <User size={40} className="text-gray-200" />
-                    <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-shein-blue rounded-2xl flex items-center justify-center border-4 border-white">
-                        <Plus size={16} className="text-white" />
+            <div className="bg-white min-h-screen flex flex-col p-8 pt-16 relative">
+                <div className="flex flex-col items-center mb-10">
+                    <div className="w-24 h-24 bg-shein-light rounded-[40px] flex items-center justify-center mb-6">
+                        <User size={40} className="text-shein-blue/50" />
                     </div>
+                    <h2 className="text-2xl font-black uppercase tracking-tighter text-shein-dark">
+                        {isRegistering ? 'Create Account' : 'Welcome Back'}
+                    </h2>
+                    <p className="text-[11px] text-gray-400 font-bold uppercase tracking-widest mt-2">
+                        {isRegistering ? 'Join GLO-MED today' : 'Sign in to continue'}
+                    </p>
                 </div>
-                <h2 className="text-lg font-black uppercase tracking-tighter text-shein-dark mb-2">Welcome to GLO-MED</h2>
-                <p className="text-[11px] text-gray-400 font-bold uppercase tracking-widest mb-10 opacity-70">
-                    Sign in for a personalized experience
-                </p>
-                <button className="w-full bg-shein-blue text-white py-5 rounded-full font-black uppercase tracking-[2px] shadow-2xl shadow-shein-blue/20">
-                    Sign In / Register
-                </button>
+
+                <form onSubmit={handleSubmit} className="flex flex-col gap-4 w-full max-w-sm mx-auto">
+                    {error && (
+                        <div className="bg-red-50 text-red-500 p-3 rounded-2xl text-[11px] font-bold text-center border border-red-100">
+                            {error}
+                        </div>
+                    )}
+
+                    {isRegistering && (
+                        <input
+                            type="text"
+                            placeholder="Full Name"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            required
+                            className="bg-gray-50 border-none p-4 rounded-2xl text-sm font-medium focus:ring-2 focus:ring-shein-blue w-full outline-none"
+                        />
+                    )}
+                    <input
+                        type="email"
+                        placeholder="Email Address"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                        className="bg-gray-50 border-none p-4 rounded-2xl text-sm font-medium focus:ring-2 focus:ring-shein-blue w-full outline-none"
+                    />
+                    <input
+                        type="password"
+                        placeholder="Password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        className="bg-gray-50 border-none p-4 rounded-2xl text-sm font-medium focus:ring-2 focus:ring-shein-blue w-full outline-none"
+                    />
+
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className="w-full bg-shein-blue text-white py-5 rounded-2xl font-black uppercase tracking-[2px] shadow-lg shadow-shein-blue/20 mt-4 disabled:opacity-50 flex justify-center items-center active:scale-95 transition-transform"
+                    >
+                        {loading ? <Loader2 className="animate-spin" size={20} /> : (isRegistering ? 'Register' : 'Sign In')}
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setIsRegistering(!isRegistering)}
+                        className="text-[11px] font-bold text-gray-500 uppercase tracking-widest mt-4 p-2"
+                    >
+                        {isRegistering ? 'ALREADY HAVE AN ACCOUNT? SIGN IN' : 'NEW TO GLO-MED? REGISTER'}
+                    </button>
+                </form>
             </div>
         );
     }
@@ -27,21 +102,27 @@ const Profile = () => {
     return (
         <div className="bg-shein-light min-h-screen">
             {/* Profile Header */}
-            <div className="bg-white px-6 pt-10 pb-8 rounded-b-[48px] shadow-sm">
-                <div className="flex items-center gap-5 mb-8">
+            <div className="bg-white px-6 pt-10 pb-8 rounded-b-[48px] shadow-sm relative">
+                {isAdmin && (
+                    <div className="absolute top-4 right-6 bg-shein-blue px-3 py-1 rounded-full text-white text-[9px] font-black uppercase tracking-widest shadow-lg shadow-shein-blue/30 flex items-center gap-1">
+                        <ShieldCheck size={12} /> Admin Area
+                    </div>
+                )}
+                <div className="flex items-center gap-5 mb-8 mt-2">
                     <div className="relative">
-                        <div className="w-20 h-20 rounded-[32px] bg-shein-blue/10 flex items-center justify-center border-4 border-shein-light overflow-hidden">
+                        <div className="w-20 h-20 rounded-[32px] bg-shein-blue/10 flex items-center justify-center border-4 border-shein-light shadow-sm overflow-hidden">
                             <User size={32} className="text-shein-blue" />
                         </div>
-                        <button className="absolute -bottom-1 -right-1 w-8 h-8 bg-white rounded-2xl shadow-lg flex items-center justify-center text-shein-blue border border-gray-100">
-                            <Camera size={14} />
-                        </button>
                     </div>
                     <div className="flex-1 min-w-0">
-                        <h2 className="text-xl font-black text-shein-dark uppercase tracking-tight truncate">User Name</h2>
-                        <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mt-1">Free Member • 0 Points</p>
+                        <h2 className="text-xl font-black text-shein-dark uppercase tracking-tight truncate">
+                            {currentUser.displayName || 'User Name'}
+                        </h2>
+                        <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mt-1">
+                            {currentUser.email}
+                        </p>
                     </div>
-                    <button className="p-3 bg-gray-50 rounded-2xl text-gray-400 hover:text-red-500 transition-colors">
+                    <button onClick={logout} className="p-3 bg-gray-50 rounded-2xl text-gray-400 hover:text-red-500 transition-colors active:scale-90">
                         <LogOut size={20} />
                     </button>
                 </div>
@@ -125,12 +206,6 @@ const MenuItem = ({ icon: Icon, label, last, color = "text-shein-dark" }) => (
         </div>
         <ChevronRight size={16} className="text-gray-300" />
     </div>
-);
-
-const Plus = ({ size, className }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className={className}>
-        <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-    </svg>
 );
 
 export default Profile;

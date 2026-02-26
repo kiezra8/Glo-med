@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
 import { useAppData } from '../hooks/useAppData';
 import { LayoutGrid, ChevronRight, Package, ShoppingBag } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import AdminImageUpload from '../components/AdminImageUpload';
 
 const Categories = () => {
     const { categories, loading } = useAppData();
+    const { isAdmin } = useAuth();
     const [selectedCat, setSelectedCat] = useState(null);
 
     const activeCategory = selectedCat || (categories.length > 0 ? categories[0] : null);
@@ -57,6 +60,13 @@ const Categories = () => {
                         <div className="space-y-6">
                             {/* Banner Area */}
                             <div className="relative h-36 rounded-2xl overflow-hidden group">
+                                {isAdmin && (
+                                    <AdminImageUpload
+                                        collectionName="categories"
+                                        documentId={activeCategory.id}
+                                        className="top-2 right-2"
+                                    />
+                                )}
                                 <img src={activeCategory.image} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt="" />
                                 <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent flex flex-col justify-center px-4">
                                     <h3 className="text-white text-lg font-black uppercase tracking-tighter">{activeCategory.name}</h3>
@@ -70,9 +80,15 @@ const Categories = () => {
                             <div className="grid grid-cols-2 gap-3">
                                 {(activeCategory.subcategories || []).map((sub) => (
                                     <div key={sub.id} className="group cursor-pointer">
-                                        <div className="aspect-square rounded-2xl overflow-hidden bg-shein-light mb-2 relative shadow-sm border border-gray-50">
-                                            <img src={sub.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="" />
-                                            <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        <div className="aspect-square rounded-[20px] overflow-hidden bg-shein-light mb-2 relative shadow-sm border border-gray-50 p-4 transition-colors group-hover:bg-gray-100">
+                                            {isAdmin && (
+                                                <AdminImageUpload
+                                                    collectionName="subcategories"
+                                                    documentId={sub.id}
+                                                    className="top-1 right-1 scale-75 origin-top-right"
+                                                />
+                                            )}
+                                            <img src={sub.image} className="w-full h-full object-contain mix-blend-multiply group-hover:scale-110 transition-transform duration-500" alt="" />
                                         </div>
                                         <div className="flex items-center justify-between px-1">
                                             <span className="text-[10px] font-black uppercase tracking-tighter text-shein-dark flex-1 truncate pr-2">{sub.name}</span>
