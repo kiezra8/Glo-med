@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useAppData } from '../hooks/useAppData';
-import { Sparkles, Zap, ChevronRight, Star, ShoppingBag, Edit2 } from 'lucide-react';
+import { Sparkles, Zap, ChevronRight, Star, ShoppingBag, Edit2, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useCart } from '../contexts/CartContext';
 import AdminImageUpload from '../components/AdminImageUpload';
 import AdminDataModal from '../components/AdminDataModal';
 
 const Home = () => {
     const { categories, loading } = useAppData();
     const { isAdmin } = useAuth();
+    const { addToCart } = useCart();
     const [currentSlide, setCurrentSlide] = useState(0);
+    const [addedStates, setAddedStates] = useState({});
 
     // Admin Modal State
     const [modalConfig, setModalConfig] = useState({
@@ -21,6 +24,15 @@ const Home = () => {
 
     const openModal = (type, mode, initialData = null, parentId = null) => {
         setModalConfig({ isOpen: true, type, mode, initialData, parentId });
+    };
+
+    const handleAddToCart = (e, product) => {
+        e.stopPropagation();
+        addToCart(product);
+        setAddedStates(prev => ({ ...prev, [product.id]: true }));
+        setTimeout(() => {
+            setAddedStates(prev => ({ ...prev, [product.id]: false }));
+        }, 2000);
     };
 
     const heroSlides = [
@@ -98,24 +110,24 @@ const Home = () => {
             <div className="mt-8 px-4 overflow-x-auto hide-scrollbar flex gap-4">
                 {loading ? (
                     Array(5).fill(0).map((_, i) => (
-                        <div key={i} className="flex flex-col items-center gap-2 min-w-[96px]">
-                            <div className="w-24 h-24 rounded-[24px] bg-gray-100 animate-pulse" />
+                        <div key={i} className="flex flex-col items-center gap-2 min-w-[100px]">
+                            <div className="w-[100px] aspect-[4/5] rounded-2xl bg-gray-100 animate-pulse" />
                             <div className="w-16 h-2 bg-gray-100 rounded animate-pulse" />
                         </div>
                     ))
                 ) : (
                     categories.map((cat) => (
-                        <div key={cat.id} className="flex flex-col items-center gap-2 min-w-[96px] group cursor-pointer">
-                            <div className="w-24 h-24 rounded-[24px] overflow-hidden bg-shein-light shadow-sm border border-gray-50 p-4 transition-all group-hover:shadow-md group-hover:border-shein-blue/20 group-hover:bg-white active:scale-95 relative">
+                        <div key={cat.id} className="flex flex-col items-center gap-2 min-w-[100px] group cursor-pointer">
+                            <div className="w-[100px] aspect-[4/5] rounded-2xl overflow-hidden bg-shein-light shadow-sm border border-gray-50 transition-all group-hover:shadow-md group-hover:border-shein-blue/20 active:scale-95 relative">
                                 {isAdmin && (
                                     <button
                                         onClick={(e) => { e.stopPropagation(); openModal('category', 'edit', cat, null); }}
-                                        className="absolute top-1 right-1 w-6 h-6 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-shein-dark shadow-sm z-10 hover:text-shein-blue transition-colors"
+                                        className="absolute top-2 right-2 w-7 h-7 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-shein-dark shadow-sm z-10 hover:text-shein-blue transition-colors"
                                     >
-                                        <Edit2 size={10} />
+                                        <Edit2 size={12} />
                                     </button>
                                 )}
-                                <img src={cat.image} className="w-full h-full object-contain mix-blend-multiply group-hover:scale-110 transition-transform duration-300" alt={cat.name} />
+                                <img src={cat.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" alt={cat.name} />
                             </div>
                             <span className="text-[11px] font-black uppercase tracking-tighter text-gray-500 group-hover:text-shein-blue text-center leading-tight">
                                 {cat.name}
@@ -175,8 +187,12 @@ const Home = () => {
                                             -{p.discount}%
                                         </div>
                                     )}
-                                    <button className="absolute bottom-2 right-2 w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center text-shein-dark shadow-sm hover:bg-shein-blue hover:text-white transition-colors">
-                                        <ShoppingBag size={14} />
+                                    <button
+                                        onClick={(e) => handleAddToCart(e, p)}
+                                        className={`absolute bottom-2 right-2 w-8 h-8 rounded-full flex items-center justify-center shadow-sm transition-colors ${addedStates[p.id] ? 'bg-shein-green text-white' : 'bg-white/90 backdrop-blur-sm text-shein-dark hover:bg-shein-blue hover:text-white'
+                                            }`}
+                                    >
+                                        {addedStates[p.id] ? <CheckCircle2 size={16} /> : <ShoppingBag size={14} />}
                                     </button>
                                 </div>
                                 <div className="p-2 space-y-1">

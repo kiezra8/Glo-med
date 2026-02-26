@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
 import { useAppData } from '../hooks/useAppData';
-import { LayoutGrid, ChevronRight, Package, ShoppingBag, ChevronLeft, Plus, Edit2 } from 'lucide-react';
+import { LayoutGrid, ChevronRight, Package, ShoppingBag, ChevronLeft, Plus, Edit2, Sparkles, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useCart } from '../contexts/CartContext';
 import AdminImageUpload from '../components/AdminImageUpload';
 import AdminDataModal from '../components/AdminDataModal';
 
 const Categories = () => {
     const { categories, loading } = useAppData();
     const { isAdmin } = useAuth();
+    const { addToCart } = useCart();
     const [selectedCat, setSelectedCat] = useState(null);
     const [selectedSubCat, setSelectedSubCat] = useState(null);
+    const [addedStates, setAddedStates] = useState({});
 
     // Admin Modal State
     const [modalConfig, setModalConfig] = useState({
@@ -24,6 +27,15 @@ const Categories = () => {
 
     const openModal = (type, mode, initialData = null, parentId = null) => {
         setModalConfig({ isOpen: true, type, mode, initialData, parentId });
+    };
+
+    const handleAddToCart = (e, product) => {
+        e.stopPropagation();
+        addToCart(product);
+        setAddedStates(prev => ({ ...prev, [product.id]: true }));
+        setTimeout(() => {
+            setAddedStates(prev => ({ ...prev, [product.id]: false }));
+        }, 2000);
     };
 
     return (
@@ -57,11 +69,11 @@ const Categories = () => {
                                 className={`w-full p-4 flex flex-col items-center gap-3 transition-all relative ${activeCategory?.id === cat.id ? 'bg-white py-6' : 'grayscale opacity-70 hover:opacity-100'
                                     }`}
                             >
-                                <div className={`w-20 h-20 rounded-full overflow-hidden border-2 ${activeCategory?.id === cat.id ? 'border-shein-blue shadow-xl shadow-shein-blue/20 scale-110' : 'border-transparent'
+                                <div className={`w-[72px] aspect-[4/5] rounded-[20px] overflow-hidden border-2 ${activeCategory?.id === cat.id ? 'border-shein-blue shadow-xl shadow-shein-blue/20 scale-105' : 'border-transparent'
                                     }`}>
                                     <img src={cat.image} className="w-full h-full object-cover" alt="" />
                                 </div>
-                                <span className={`text-[10px] font-black uppercase tracking-tighter text-center leading-[1.1] ${activeCategory?.id === cat.id ? 'text-shein-blue' : 'text-gray-400'
+                                <span className={`text-[10px] font-black uppercase tracking-tighter text-center leading-[1.1] px-1 ${activeCategory?.id === cat.id ? 'text-shein-blue' : 'text-gray-400'
                                     }`}>
                                     {cat.name}
                                 </span>
@@ -120,6 +132,13 @@ const Categories = () => {
                                                                 -{p.discount}%
                                                             </div>
                                                         )}
+                                                        <button
+                                                            onClick={(e) => handleAddToCart(e, p)}
+                                                            className={`absolute bottom-3 right-3 w-8 h-8 rounded-full flex items-center justify-center shadow-md transition-all ${addedStates[p.id] ? 'bg-shein-green text-white scale-110' : 'bg-white/90 backdrop-blur-sm text-shein-dark hover:bg-shein-blue hover:text-white'
+                                                                }`}
+                                                        >
+                                                            {addedStates[p.id] ? <CheckCircle2 size={16} /> : <ShoppingBag size={14} />}
+                                                        </button>
                                                     </div>
                                                     <div className="px-2">
                                                         <h4 className="text-xs font-black uppercase tracking-tighter text-shein-dark line-clamp-2 leading-tight mb-1.5">{p.name}</h4>
@@ -187,8 +206,8 @@ const Categories = () => {
                                                 className="group cursor-pointer active:scale-95 transition-transform"
                                                 onClick={() => setSelectedSubCat(sub)}
                                             >
-                                                {/* Aspect-Square strictly enforced, huge padding for Shein look */}
-                                                <div className="aspect-square rounded-[32px] overflow-hidden bg-shein-light mb-3 relative shadow-sm border-2 border-transparent group-hover:border-shein-blue/20 p-6 transition-all group-hover:bg-white group-hover:shadow-xl group-hover:shadow-shein-blue/5">
+                                                {/* Adjusted to aspect-[4/5], image fully covers the card without padding */}
+                                                <div className="aspect-[4/5] rounded-3xl overflow-hidden bg-shein-light mb-3 relative shadow-sm border border-gray-50 group-hover:border-shein-blue/20 transition-all group-hover:shadow-md">
                                                     {isAdmin && (
                                                         <AdminImageUpload
                                                             collectionName="subcategories"
@@ -196,7 +215,7 @@ const Categories = () => {
                                                             className="top-2 right-2 scale-[0.85] origin-top-right z-20"
                                                         />
                                                     )}
-                                                    <img src={sub.image} className="w-full h-full object-contain mix-blend-multiply group-hover:scale-110 transition-transform duration-500" alt="" />
+                                                    <img src={sub.image} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="" />
                                                 </div>
                                                 <div className="px-2 text-center flex items-center justify-center gap-2">
                                                     <div className="flex flex-col items-center">
@@ -244,12 +263,4 @@ const Categories = () => {
         </div>
     );
 };
-
-const Sparkles = ({ size }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-        <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
-        <path d="M5 3v4" /><path d="M19 17v4" /><path d="M3 5h4" /><path d="M17 19h4" />
-    </svg>
-);
-
 export default Categories;

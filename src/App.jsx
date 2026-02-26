@@ -6,6 +6,7 @@ import News from './pages/News';
 import Chat from './pages/Chat';
 import Cart from './pages/Cart';
 import Profile from './pages/Profile';
+import AdminDashboard from './pages/AdminDashboard';
 
 function App() {
     const [currentPage, setCurrentPage] = useState('home');
@@ -17,6 +18,7 @@ function App() {
             case 'chat': return <Chat />;
             case 'cart': return <Cart />;
             case 'profile': return <Profile />;
+            case 'admin-dashboard': return <AdminDashboard />;
             default: return <Home />;
         }
     };

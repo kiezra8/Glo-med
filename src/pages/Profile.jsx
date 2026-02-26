@@ -104,9 +104,12 @@ const Profile = () => {
             {/* Profile Header */}
             <div className="bg-white px-6 pt-10 pb-8 rounded-b-[48px] shadow-sm relative">
                 {isAdmin && (
-                    <div className="absolute top-4 right-6 bg-shein-blue px-3 py-1 rounded-full text-white text-[9px] font-black uppercase tracking-widest shadow-lg shadow-shein-blue/30 flex items-center gap-1">
-                        <ShieldCheck size={12} /> Admin Area
-                    </div>
+                    <button
+                        onClick={() => window.location.href = '#/admin-dashboard'}
+                        className="absolute top-4 right-6 bg-shein-blue px-3 py-1.5 rounded-full text-white text-[9px] font-black uppercase tracking-widest shadow-lg shadow-shein-blue/30 flex items-center gap-1 hover:bg-shein-dark active:scale-95 transition-all"
+                    >
+                        <ShieldCheck size={12} /> View Dashboard
+                    </button>
                 )}
                 <div className="flex items-center gap-5 mb-8 mt-2">
                     <div className="relative">
