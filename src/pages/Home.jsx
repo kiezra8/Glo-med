@@ -6,7 +6,7 @@ import { useCart } from '../contexts/CartContext';
 import AdminImageUpload from '../components/AdminImageUpload';
 import AdminDataModal from '../components/AdminDataModal';
 
-const Home = () => {
+const Home = ({ onNavigate }) => {
     const { categories, loading } = useAppData();
     const { isAdmin } = useAuth();
     const { addToCart } = useCart();
@@ -117,7 +117,7 @@ const Home = () => {
                     ))
                 ) : (
                     categories.map((cat) => (
-                        <div key={cat.id} className="flex flex-col items-center gap-2 min-w-[100px] group cursor-pointer">
+                        <div key={cat.id} onClick={() => onNavigate('categories')} className="flex flex-col items-center gap-2 min-w-[100px] group cursor-pointer">
                             <div className="w-[100px] aspect-[4/5] rounded-2xl overflow-hidden bg-shein-light shadow-sm border border-gray-50 transition-all group-hover:shadow-md group-hover:border-shein-blue/20 active:scale-95 relative">
                                 {isAdmin && (
                                     <button
@@ -146,7 +146,7 @@ const Home = () => {
                         </div>
                         <h3 className="text-sm font-black uppercase tracking-widest text-shein-dark">Flash Deals</h3>
                     </div>
-                    <button className="flex items-center gap-1 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                    <button onClick={() => onNavigate('categories')} className="flex items-center gap-1 text-[10px] font-black text-gray-400 uppercase tracking-widest hover:text-shein-blue transition-colors">
                         View All <ChevronRight size={14} />
                     </button>
                 </div>

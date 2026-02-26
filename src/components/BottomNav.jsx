@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Home, LayoutGrid, ShoppingBag, User } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
 
-const BottomNav = ({ activeTab, onTabChange }) => {
+const BottomNav = ({ currentPage, onPageChange }) => {
     // Add custom animation state for tab clicks
     const [animatingTab, setAnimatingTab] = useState(null);
     const { getCartCount } = useCart();
@@ -18,7 +18,7 @@ const BottomNav = ({ activeTab, onTabChange }) => {
 
     const handleTabClick = (id) => {
         setAnimatingTab(id);
-        onTabChange(id);
+        onPageChange(id);
         setTimeout(() => setAnimatingTab(null), 300); // Reset animation
     };
 
@@ -27,7 +27,7 @@ const BottomNav = ({ activeTab, onTabChange }) => {
             <div className="flex justify-between items-center max-w-md mx-auto">
                 {tabs.map((tab) => {
                     const Icon = tab.icon;
-                    const isActive = activeTab === tab.id;
+                    const isActive = currentPage === tab.id;
                     const isAnimating = animatingTab === tab.id;
 
                     return (
@@ -40,8 +40,8 @@ const BottomNav = ({ activeTab, onTabChange }) => {
                                 <Icon
                                     size={24}
                                     className={`transition-all duration-300 ${isAnimating ? 'scale-75' : 'scale-100'} ${isActive
-                                            ? 'text-shein-dark fill-shein-dark'
-                                            : 'text-gray-400'
+                                        ? 'text-shein-dark fill-shein-dark'
+                                        : 'text-gray-400'
                                         }`}
                                     strokeWidth={isActive ? 2 : 1.5}
                                 />

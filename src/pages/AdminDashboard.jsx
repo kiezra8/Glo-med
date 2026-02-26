@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import {
     BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart
 } from 'recharts';
-import { TrendingUp, TrendingDown, DollarSign, ShoppingBag, ArrowLeft, Calendar, Filter } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, ShoppingBag, ArrowLeft, Calendar, Filter, ShieldAlert } from 'lucide-react';
 
 const AdminDashboard = () => {
     const { isAdmin } = useAuth();
