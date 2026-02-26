@@ -1,55 +1,75 @@
 import React from 'react';
-import { Send, User, ChevronLeft, MoreVertical, Camera } from 'lucide-react';
+import { MessageCircle, Phone, ArrowUpRight, ShieldCheck, HeartPulse } from 'lucide-react';
 
 const Chat = () => {
+    // Hidden phone number to prevent scraping but available to the system
+    const supportNumber = '256756721820';
+
+    const handleWhatsApp = () => {
+        const message = encodeURIComponent("Hello! I'm interested in ordering medical supplies from GLO-MED.");
+        window.open(`https://wa.me/${supportNumber}?text=${message}`, '_blank');
+    };
+
+    const handleCall = () => {
+        window.location.href = `tel:+${supportNumber}`;
+    };
+
     return (
-        <div className="flex flex-col h-full bg-[#F5F5F5]">
-            {/* Top Bar */}
-            <div className="bg-white px-4 py-3 flex items-center justify-between border-b border-gray-100 shadow-sm z-10">
-                <div className="flex items-center gap-3">
-                    <div className="relative">
-                        <div className="w-10 h-10 rounded-full bg-shein-blue/5 flex items-center justify-center border border-shein-blue/10">
-                            <User size={20} className="text-shein-blue" />
+        <div className="bg-shein-light min-h-screen flex flex-col pt-8 px-6 text-center">
+
+            <div className="flex-1 flex flex-col items-center justify-center -mt-20">
+                <div className="w-24 h-24 bg-white shadow-xl shadow-shein-blue/5 rounded-[40px] flex items-center justify-center mb-8 relative">
+                    <HeartPulse size={40} className="text-shein-blue" />
+                    <div className="absolute -top-2 -right-2 w-8 h-8 bg-shein-green rounded-full flex items-center justify-center border-4 border-white">
+                        <div className="w-2.5 h-2.5 bg-white rounded-full animate-pulse" />
+                    </div>
+                </div>
+
+                <h1 className="text-2xl font-black uppercase tracking-tighter text-shein-dark mb-3">
+                    We're Here to Help
+                </h1>
+                <p className="text-[12px] text-gray-400 font-bold uppercase tracking-widest leading-relaxed px-4 max-w-sm">
+                    Connect with our medical supply experts instantly for orders, quotes, and support.
+                </p>
+
+                <div className="w-full max-w-sm space-y-4 mt-12">
+                    <button
+                        onClick={handleWhatsApp}
+                        className="w-full bg-[#25D366] text-white p-5 rounded-3xl flex items-center justify-between group active:scale-95 transition-all shadow-lg shadow-[#25D366]/20"
+                    >
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md">
+                                <MessageCircle size={24} className="text-white fill-white" />
+                            </div>
+                            <div className="text-left">
+                                <div className="text-[13px] font-black uppercase tracking-widest leading-tight">Chat on WhatsApp</div>
+                                <div className="text-[9px] font-bold text-white/80 uppercase tracking-[2px] mt-0.5">Fastest Response</div>
+                            </div>
                         </div>
-                        <div className="absolute bottom-0 right-0 w-3 h-3 bg-shein-green rounded-full border-2 border-white" />
-                    </div>
-                    <div>
-                        <h3 className="font-black text-shein-dark text-[11px] uppercase tracking-tighter">Support Expert</h3>
-                        <p className="text-[9px] text-shein-green font-black uppercase tracking-tighter">Always Online</p>
-                    </div>
-                </div>
-                <button className="p-2 text-gray-400">
-                    <MoreVertical size={20} />
-                </button>
-            </div>
+                        <ArrowUpRight size={20} className="text-white/50 group-hover:text-white transition-colors" />
+                    </button>
 
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 hide-scrollbar">
-                <div className="flex justify-start">
-                    <div className="bg-white p-3 rounded-2xl rounded-tl-none shadow-sm max-w-[80%] border border-gray-50">
-                        <p className="text-[11px] text-shein-dark font-medium leading-relaxed">
-                            Hello! Welcome to GLO-MED Support. How can we help you today?
-                        </p>
-                        <span className="text-[8px] text-gray-300 font-black uppercase mt-1 block">08:00 AM</span>
-                    </div>
+                    <button
+                        onClick={handleCall}
+                        className="w-full bg-white text-shein-dark p-5 rounded-3xl flex items-center justify-between group active:scale-95 transition-all shadow-sm border border-gray-100 hover:border-shein-blue/30"
+                    >
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center group-hover:bg-shein-blue/10 transition-colors">
+                                <Phone size={24} className="text-shein-dark group-hover:text-shein-blue transition-colors" />
+                            </div>
+                            <div className="text-left">
+                                <div className="text-[13px] font-black uppercase tracking-widest leading-tight">Call Support</div>
+                                <div className="text-[9px] font-bold text-gray-400 uppercase tracking-[2px] mt-0.5">Available 24/7</div>
+                            </div>
+                        </div>
+                        <ArrowUpRight size={20} className="text-gray-300 group-hover:text-shein-blue transition-colors" />
+                    </button>
                 </div>
             </div>
 
-            {/* Input Bar */}
-            <div className="p-4 bg-white border-t border-gray-100 pb-20">
-                <div className="flex items-center gap-2 bg-gray-50 rounded-full px-4 py-2 border border-gray-100 focus-within:bg-white focus-within:ring-2 focus-within:ring-shein-blue/10 transition-all">
-                    <button className="text-gray-400">
-                        <Camera size={20} />
-                    </button>
-                    <input
-                        type="text"
-                        placeholder="Type a message..."
-                        className="flex-1 bg-transparent border-none p-2 text-xs focus:ring-0 text-shein-dark font-medium"
-                    />
-                    <button className="bg-shein-blue text-white p-2 rounded-full shadow-lg shadow-shein-blue/20 active:scale-90 transition-transform">
-                        <Send size={16} fill="white" />
-                    </button>
-                </div>
+            <div className="pb-24 flex items-center justify-center gap-2 opacity-60">
+                <ShieldCheck size={16} className="text-shein-blue" />
+                <span className="text-[9px] font-black uppercase tracking-[3px] text-gray-500">Secure Medical Network</span>
             </div>
         </div>
     );

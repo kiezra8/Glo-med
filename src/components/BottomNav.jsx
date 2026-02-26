@@ -5,7 +5,6 @@ const BottomNav = ({ currentPage, onPageChange }) => {
     const tabs = [
         { id: 'home', icon: Home, label: 'HOME' },
         { id: 'categories', icon: LayoutGrid, label: 'CATEGORY' },
-        { id: 'news', icon: Sparkles, label: 'NEWS' },
         { id: 'chat', icon: MessageCircle, label: 'CHAT' },
         { id: 'profile', icon: User, label: 'ME' }
     ];

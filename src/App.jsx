@@ -14,7 +14,6 @@ function App() {
         switch (currentPage) {
             case 'home': return <Home />;
             case 'categories': return <Categories />;
-            case 'news': return <News />;
             case 'chat': return <Chat />;
             case 'cart': return <Cart />;
             case 'profile': return <Profile />;
