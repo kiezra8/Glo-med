@@ -1,13 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { useAppData } from '../hooks/useAppData';
-import { Sparkles, Zap, ChevronRight, Star, ShoppingBag } from 'lucide-react';
+import { Sparkles, Zap, ChevronRight, Star, ShoppingBag, Edit2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import AdminImageUpload from '../components/AdminImageUpload';
+import AdminDataModal from '../components/AdminDataModal';
 
 const Home = () => {
     const { categories, loading } = useAppData();
     const { isAdmin } = useAuth();
     const [currentSlide, setCurrentSlide] = useState(0);
+
+    // Admin Modal State
+    const [modalConfig, setModalConfig] = useState({
+        isOpen: false,
+        type: 'product',
+        mode: 'edit',
+        initialData: null,
+        parentId: null
+    });
+
+    const openModal = (type, mode, initialData = null, parentId = null) => {
+        setModalConfig({ isOpen: true, type, mode, initialData, parentId });
+    };
 
     const heroSlides = [
         {
@@ -81,21 +95,29 @@ const Home = () => {
             </div>
 
             {/* Quick Categories */}
-            <div className="mt-8 px-4 overflow-x-auto hide-scrollbar flex gap-6">
+            <div className="mt-8 px-4 overflow-x-auto hide-scrollbar flex gap-4">
                 {loading ? (
                     Array(5).fill(0).map((_, i) => (
-                        <div key={i} className="flex flex-col items-center gap-2 min-w-[64px]">
-                            <div className="w-16 h-16 rounded-full bg-gray-100 animate-pulse" />
-                            <div className="w-12 h-2 bg-gray-100 rounded animate-pulse" />
+                        <div key={i} className="flex flex-col items-center gap-2 min-w-[96px]">
+                            <div className="w-24 h-24 rounded-[24px] bg-gray-100 animate-pulse" />
+                            <div className="w-16 h-2 bg-gray-100 rounded animate-pulse" />
                         </div>
                     ))
                 ) : (
                     categories.map((cat) => (
-                        <div key={cat.id} className="flex flex-col items-center gap-2 min-w-[64px] group cursor-pointer">
-                            <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-transparent group-hover:border-shein-blue transition-all">
-                                <img src={cat.image} className="w-full h-full object-cover" alt={cat.name} />
+                        <div key={cat.id} className="flex flex-col items-center gap-2 min-w-[96px] group cursor-pointer">
+                            <div className="w-24 h-24 rounded-[24px] overflow-hidden bg-shein-light shadow-sm border border-gray-50 p-4 transition-all group-hover:shadow-md group-hover:border-shein-blue/20 group-hover:bg-white active:scale-95 relative">
+                                {isAdmin && (
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); openModal('category', 'edit', cat, null); }}
+                                        className="absolute top-1 right-1 w-6 h-6 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-shein-dark shadow-sm z-10 hover:text-shein-blue transition-colors"
+                                    >
+                                        <Edit2 size={10} />
+                                    </button>
+                                )}
+                                <img src={cat.image} className="w-full h-full object-contain mix-blend-multiply group-hover:scale-110 transition-transform duration-300" alt={cat.name} />
                             </div>
-                            <span className="text-[10px] font-black uppercase tracking-tighter text-gray-500 group-hover:text-shein-blue">
+                            <span className="text-[11px] font-black uppercase tracking-tighter text-gray-500 group-hover:text-shein-blue text-center leading-tight">
                                 {cat.name}
                             </span>
                         </div>
@@ -133,11 +155,19 @@ const Home = () => {
                             <div key={p.id} className="bg-white rounded-lg overflow-hidden group active:scale-[0.98] transition-all duration-200">
                                 <div className="relative aspect-[3/4] overflow-hidden bg-[#F6F6F6]">
                                     {isAdmin && (
-                                        <AdminImageUpload
-                                            collectionName="products"
-                                            documentId={p.id}
-                                            className="top-1 left-1 scale-75 origin-top-left"
-                                        />
+                                        <>
+                                            <AdminImageUpload
+                                                collectionName="products"
+                                                documentId={p.id}
+                                                className="top-1 left-1 scale-75 origin-top-left"
+                                            />
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); openModal('product', 'edit', p, p.subcategory_id); }}
+                                                className="absolute top-2 right-2 w-7 h-7 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-shein-dark shadow-sm z-10 hover:text-shein-blue transition-colors"
+                                            >
+                                                <Edit2 size={12} />
+                                            </button>
+                                        </>
                                     )}
                                     <img src={p.image} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={p.name} />
                                     {p.discount && (
@@ -175,6 +205,15 @@ const Home = () => {
                     )}
                 </div>
             </div>
+
+            <AdminDataModal
+                isOpen={modalConfig.isOpen}
+                onClose={() => setModalConfig(prev => ({ ...prev, isOpen: false }))}
+                type={modalConfig.type}
+                mode={modalConfig.mode}
+                initialData={modalConfig.initialData}
+                parentId={modalConfig.parentId}
+            />
         </div>
     );
 };
