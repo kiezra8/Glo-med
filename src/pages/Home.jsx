@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAppData } from '../hooks/useAppData';
-import { Sparkles, Zap, ChevronRight, Star } from 'lucide-react';
+import { Sparkles, Zap, ChevronRight, Star, ShoppingBag } from 'lucide-react';
 
 const Home = () => {
     const { categories, loading } = useAppData();

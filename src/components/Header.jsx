@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, LayoutGrid, Sparkles, MessageCircle, User } from 'lucide-react';
+import { Home, LayoutGrid, Sparkles, MessageCircle, User, ShoppingBag, Search, ChevronLeft } from 'lucide-react';
 
 const Header = ({ currentPage, onPageChange }) => {
     const showSearch = ['home', 'categories'].includes(currentPage);
