@@ -1,9 +1,12 @@
 import React from 'react';
 import { ShoppingBag, ChevronRight, Truck, ShieldCheck, ArrowRight, Trash2, Plus, Minus } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
+import ProductDetailModal from '../components/ProductDetailModal';
+import { useState } from 'react';
 
 const Cart = () => {
     const { cart: cartItems, removeFromCart, updateQuantity, getCartTotal } = useCart();
+    const [selectedProduct, setSelectedProduct] = useState(null);
 
     const handleWhatsAppCheckout = () => {
         if (cartItems.length === 0) return;
@@ -58,7 +61,11 @@ const Cart = () => {
 
             <div className="p-4 space-y-4">
                 {cartItems.map((item) => (
-                    <div key={item.id} className="bg-white rounded-[32px] p-4 shadow-sm flex gap-4 relative overflow-hidden group">
+                    <div
+                        key={item.id}
+                        className="bg-white rounded-[32px] p-4 shadow-sm flex gap-4 relative overflow-hidden group cursor-pointer active:scale-[0.98] transition-all"
+                        onClick={() => setSelectedProduct(item)}
+                    >
                         <div className="w-24 h-24 rounded-2xl bg-shein-light overflow-hidden flex-shrink-0 border border-gray-50 p-2">
                             <img src={item.image || "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=200"} className="w-full h-full object-cover rounded-xl" alt={item.name} />
                         </div>
@@ -128,6 +135,12 @@ const Cart = () => {
                     <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                 </button>
             </div>
+
+            <ProductDetailModal
+                isOpen={!!selectedProduct}
+                product={selectedProduct}
+                onClose={() => setSelectedProduct(null)}
+            />
         </div>
     );
 };

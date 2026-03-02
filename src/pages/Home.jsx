@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
 import AdminImageUpload from '../components/AdminImageUpload';
 import AdminDataModal from '../components/AdminDataModal';
+import ProductDetailModal from '../components/ProductDetailModal';
 
 const Home = ({ onNavigate }) => {
     const { categories, loading } = useAppData();
@@ -12,6 +13,7 @@ const Home = ({ onNavigate }) => {
     const { addToCart } = useCart();
     const [currentSlide, setCurrentSlide] = useState(0);
     const [addedStates, setAddedStates] = useState({});
+    const [selectedProduct, setSelectedProduct] = useState(null);
 
     // Admin Modal State
     const [modalConfig, setModalConfig] = useState({
@@ -164,7 +166,11 @@ const Home = ({ onNavigate }) => {
                         ))
                     ) : trendingProducts.length > 0 ? (
                         trendingProducts.map((p) => (
-                            <div key={p.id} className="bg-white rounded-lg overflow-hidden group active:scale-[0.98] transition-all duration-200">
+                            <div
+                                key={p.id}
+                                className="bg-white rounded-lg overflow-hidden group active:scale-[0.98] transition-all duration-200 cursor-pointer shadow-sm border border-gray-50"
+                                onClick={() => setSelectedProduct(p)}
+                            >
                                 <div className="relative aspect-[3/4] overflow-hidden bg-[#F6F6F6]">
                                     {isAdmin && (
                                         <>
@@ -187,23 +193,19 @@ const Home = ({ onNavigate }) => {
                                             -{p.discount}%
                                         </div>
                                     )}
-                                    <button
-                                        onClick={(e) => handleAddToCart(e, p)}
-                                        className={`absolute bottom-2 right-2 w-8 h-8 rounded-full flex items-center justify-center shadow-sm transition-colors ${addedStates[p.id] ? 'bg-shein-green text-white' : 'bg-white/90 backdrop-blur-sm text-shein-dark hover:bg-shein-blue hover:text-white'
-                                            }`}
-                                    >
-                                        {addedStates[p.id] ? <CheckCircle2 size={16} /> : <ShoppingBag size={14} />}
-                                    </button>
                                 </div>
-                                <div className="p-2 space-y-1">
+                                <div className="p-2 space-y-1 pb-3">
                                     <h4 className="text-[11px] text-gray-800 leading-tight line-clamp-2 h-7 font-medium">{p.name}</h4>
+                                    {p.description && (
+                                        <p className="text-[10px] text-gray-500 line-clamp-2 leading-tight">{p.description}</p>
+                                    )}
                                     <div className="flex items-baseline gap-1.5 flex-wrap">
-                                        <span className="text-[13px] font-black text-[#222222]">UGX {p.price}</span>
+                                        <span className="text-[13px] font-black text-green-600">UGX {p.price}</span>
                                         {p.oldPrice && (
-                                            <span className="text-[10px] text-gray-400 line-through">UGX {p.oldPrice}</span>
+                                            <span className="text-[10px] text-red-500 line-through">UGX {p.oldPrice}</span>
                                         )}
                                     </div>
-                                    <div className="flex items-center gap-1 mt-0.5">
+                                    <div className="flex items-center gap-1 mt-0.5 mb-1.5">
                                         <div className="flex items-center">
                                             {[...Array(5)].map((_, i) => (
                                                 <Star key={i} size={8} fill={i < Math.floor(p.rating || 4.5) ? "#222" : "none"} className={i < Math.floor(p.rating || 4.5) ? "text-[#222]" : "text-gray-300"} />
@@ -211,6 +213,13 @@ const Home = ({ onNavigate }) => {
                                         </div>
                                         <span className="text-[9px] text-gray-400 font-bold">({p.reviews || '100+'})</span>
                                     </div>
+                                    <button
+                                        onClick={(e) => handleAddToCart(e, p)}
+                                        className={`w-full py-1.5 text-[10px] font-black uppercase tracking-widest rounded flex items-center justify-center gap-1.5 shadow-sm transition-colors ${addedStates[p.id] ? 'bg-green-600 text-white' : 'bg-green-600 text-white hover:bg-green-700'
+                                            }`}
+                                    >
+                                        {addedStates[p.id] ? <><CheckCircle2 size={12} /> Added</> : <><ShoppingBag size={12} /> Add to Cart</>}
+                                    </button>
                                 </div>
                             </div>
                         ))
@@ -229,6 +238,12 @@ const Home = ({ onNavigate }) => {
                 mode={modalConfig.mode}
                 initialData={modalConfig.initialData}
                 parentId={modalConfig.parentId}
+            />
+
+            <ProductDetailModal
+                isOpen={!!selectedProduct}
+                product={selectedProduct}
+                onClose={() => setSelectedProduct(null)}
             />
         </div>
     );

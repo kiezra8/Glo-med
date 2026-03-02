@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
 import AdminImageUpload from '../components/AdminImageUpload';
 import AdminDataModal from '../components/AdminDataModal';
+import ProductDetailModal from '../components/ProductDetailModal';
 
 const Categories = () => {
     const { categories, loading } = useAppData();
@@ -13,6 +14,7 @@ const Categories = () => {
     const [selectedCat, setSelectedCat] = useState(null);
     const [selectedSubCat, setSelectedSubCat] = useState(null);
     const [addedStates, setAddedStates] = useState({});
+    const [selectedProduct, setSelectedProduct] = useState(null);
 
     // Admin Modal State
     const [modalConfig, setModalConfig] = useState({
@@ -116,7 +118,11 @@ const Categories = () => {
                                     <div className="grid grid-cols-2 gap-4">
                                         {(selectedSubCat.products || []).length > 0 ? (
                                             (selectedSubCat.products || []).map((p) => (
-                                                <div key={p.id} className="group cursor-pointer">
+                                                <div
+                                                    key={p.id}
+                                                    className="group cursor-pointer active:scale-[0.98] transition-all duration-200"
+                                                    onClick={() => setSelectedProduct(p)}
+                                                >
                                                     <div className="aspect-[3/4] rounded-3xl overflow-hidden bg-shein-light mb-3 relative shadow-sm border border-gray-50 p-2 group-hover:shadow-md transition-shadow">
                                                         {isAdmin && (
                                                             <button
@@ -132,19 +138,25 @@ const Categories = () => {
                                                                 -{p.discount}%
                                                             </div>
                                                         )}
+                                                    </div>
+                                                    <div className="px-2 pb-2">
+                                                        <h4 className="text-xs font-black uppercase tracking-tighter text-shein-dark line-clamp-2 leading-tight mb-1">{p.name}</h4>
+                                                        {p.description && (
+                                                            <p className="text-[10px] text-gray-500 line-clamp-2 mb-1.5 leading-tight">{p.description}</p>
+                                                        )}
+                                                        <div className="flex items-baseline gap-1.5 flex-wrap">
+                                                            <span className="text-sm font-black text-green-600">UGX {p.price?.toLocaleString()}</span>
+                                                            {p.oldPrice && (
+                                                                <span className="text-[10px] text-red-500 line-through">UGX {p.oldPrice?.toLocaleString()}</span>
+                                                            )}
+                                                        </div>
                                                         <button
                                                             onClick={(e) => handleAddToCart(e, p)}
-                                                            className={`absolute bottom-3 right-3 w-8 h-8 rounded-full flex items-center justify-center shadow-md transition-all ${addedStates[p.id] ? 'bg-shein-green text-white scale-110' : 'bg-white/90 backdrop-blur-sm text-shein-dark hover:bg-shein-blue hover:text-white'
+                                                            className={`w-full py-1.5 mt-2 text-[10px] font-black uppercase tracking-widest rounded flex items-center justify-center gap-1.5 shadow-sm transition-colors ${addedStates[p.id] ? 'bg-green-600 text-white' : 'bg-green-600 text-white hover:bg-green-700'
                                                                 }`}
                                                         >
-                                                            {addedStates[p.id] ? <CheckCircle2 size={16} /> : <ShoppingBag size={14} />}
+                                                            {addedStates[p.id] ? <><CheckCircle2 size={12} /> Added</> : <><ShoppingBag size={12} /> Add to Cart</>}
                                                         </button>
-                                                    </div>
-                                                    <div className="px-2">
-                                                        <h4 className="text-xs font-black uppercase tracking-tighter text-shein-dark line-clamp-2 leading-tight mb-1.5">{p.name}</h4>
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-sm font-black text-[#FF4545]">UGX {p.price?.toLocaleString()}</span>
-                                                        </div>
                                                     </div>
                                                 </div>
                                             ))
@@ -259,6 +271,12 @@ const Categories = () => {
                 mode={modalConfig.mode}
                 initialData={modalConfig.initialData}
                 parentId={modalConfig.parentId}
+            />
+
+            <ProductDetailModal
+                isOpen={!!selectedProduct}
+                product={selectedProduct}
+                onClose={() => setSelectedProduct(null)}
             />
         </div>
     );
