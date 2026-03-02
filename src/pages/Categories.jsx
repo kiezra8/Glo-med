@@ -5,7 +5,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
 import AdminImageUpload from '../components/AdminImageUpload';
 import AdminDataModal from '../components/AdminDataModal';
-import ProductDetailModal from '../components/ProductDetailModal';
 
 const Categories = () => {
     const { categories, loading } = useAppData();
@@ -14,7 +13,6 @@ const Categories = () => {
     const [selectedCat, setSelectedCat] = useState(null);
     const [selectedSubCat, setSelectedSubCat] = useState(null);
     const [addedStates, setAddedStates] = useState({});
-    const [selectedProduct, setSelectedProduct] = useState(null);
 
     // Admin Modal State
     const [modalConfig, setModalConfig] = useState({
@@ -121,7 +119,7 @@ const Categories = () => {
                                                 <div
                                                     key={p.id}
                                                     className="group cursor-pointer active:scale-[0.98] transition-all duration-200"
-                                                    onClick={() => setSelectedProduct(p)}
+                                                    onClick={() => window.location.hash = `#/product_details/${p.id}`}
                                                 >
                                                     <div className="aspect-[3/4] rounded-3xl overflow-hidden bg-shein-light mb-3 relative shadow-sm border border-gray-50 p-2 group-hover:shadow-md transition-shadow">
                                                         {isAdmin && (
@@ -271,12 +269,6 @@ const Categories = () => {
                 mode={modalConfig.mode}
                 initialData={modalConfig.initialData}
                 parentId={modalConfig.parentId}
-            />
-
-            <ProductDetailModal
-                isOpen={!!selectedProduct}
-                product={selectedProduct}
-                onClose={() => setSelectedProduct(null)}
             />
         </div>
     );

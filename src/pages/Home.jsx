@@ -5,7 +5,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
 import AdminImageUpload from '../components/AdminImageUpload';
 import AdminDataModal from '../components/AdminDataModal';
-import ProductDetailModal from '../components/ProductDetailModal';
 
 const Home = ({ onNavigate }) => {
     const { categories, loading } = useAppData();
@@ -13,7 +12,6 @@ const Home = ({ onNavigate }) => {
     const { addToCart } = useCart();
     const [currentSlide, setCurrentSlide] = useState(0);
     const [addedStates, setAddedStates] = useState({});
-    const [selectedProduct, setSelectedProduct] = useState(null);
 
     // Admin Modal State
     const [modalConfig, setModalConfig] = useState({
@@ -169,7 +167,7 @@ const Home = ({ onNavigate }) => {
                             <div
                                 key={p.id}
                                 className="bg-white rounded-lg overflow-hidden group active:scale-[0.98] transition-all duration-200 cursor-pointer shadow-sm border border-gray-50"
-                                onClick={() => setSelectedProduct(p)}
+                                onClick={() => window.location.hash = `#/product_details/${p.id}`}
                             >
                                 <div className="relative aspect-[3/4] overflow-hidden bg-[#F6F6F6]">
                                     {isAdmin && (
@@ -238,12 +236,6 @@ const Home = ({ onNavigate }) => {
                 mode={modalConfig.mode}
                 initialData={modalConfig.initialData}
                 parentId={modalConfig.parentId}
-            />
-
-            <ProductDetailModal
-                isOpen={!!selectedProduct}
-                product={selectedProduct}
-                onClose={() => setSelectedProduct(null)}
             />
         </div>
     );

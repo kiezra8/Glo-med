@@ -8,6 +8,8 @@ import Cart from './pages/Cart';
 import Profile from './pages/Profile';
 import AdminDashboard from './pages/AdminDashboard';
 
+import ProductDetails from './pages/ProductDetails';
+
 function App() {
     const [currentRoute, setCurrentRoute] = useState('home');
 
@@ -29,6 +31,10 @@ function App() {
     };
 
     const renderPage = () => {
+        if (currentRoute.startsWith('product_details/')) {
+            return <ProductDetails />;
+        }
+
         switch (currentRoute) {
             case 'home': return <Home onNavigate={handleNavigate} />;
             case 'categories': return <Categories />;
